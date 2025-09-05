@@ -33,13 +33,8 @@
         .content-section { padding: 0 15px; margin-bottom: 30px; }
         .section-title { font-size: 18px; font-weight: 600; margin-bottom: 15px; }
         
-        .carousel-wrapper { overflow: hidden; }
-        .content-carousel { display: flex; gap: 10px; padding-bottom: 10px; touch-action: pan-y; }
-        
         .content-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .content-grid .content-card { width: 100%; }
-        
-        .content-card { position: relative; flex-shrink: 0; width: 130px; background-color: var(--card-color); border-radius: 8px; overflow: hidden; transition: transform 0.2s; cursor: pointer; }
+        .content-card { position: relative; width: 100%; background-color: var(--card-color); border-radius: 8px; overflow: hidden; transition: transform 0.2s; cursor: pointer; }
         .content-card:hover { transform: scale(1.05); }
         .content-thumbnail { width: 100%; height: 180px; object-fit: cover; }
         .content-title { font-size: 14px; padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -117,12 +112,12 @@
                     <div class="slider-container" id="slider"></div>
                     <div class="content-section">
                         <h2 class="section-title" data-lang-key="popularMovies"></h2>
-                        <div class="carousel-wrapper" id="popularMovies"><div class="loader"></div></div>
+                        <div id="popularMovies"><div class="loader"></div></div>
                     </div>
                     <div class="ad-container" id="homeAdContainer"></div>
                     <div class="content-section">
                         <h2 class="section-title" data-lang-key="trendingSeries"></h2>
-                        <div class="carousel-wrapper" id="trendingSeries"><div class="loader"></div></div>
+                        <div id="trendingSeries"><div class="loader"></div></div>
                     </div>
                 </section>
                 <section id="moviesSection" style="display: none;">
@@ -307,15 +302,15 @@
             let allBanners = [];
             database.ref('movies').on('value', s => {
                 const data = s.val() ? Object.values(s.val()) : [];
-                createCarousel('popularMovies', data);
-                displayGrid('allMoviesGrid', data);
+                displayGrid('popularMovies', data.slice(0, 10)); // Home grid
+                displayGrid('allMoviesGrid', data); // Movies page grid
                 allBanners.push(...data.filter(item => item.banner));
                 if (allBanners.length > 0) populateSlider(allBanners);
             });
             database.ref('series').on('value', s => {
                 const data = s.val() ? Object.values(s.val()) : [];
-                createCarousel('trendingSeries', data);
-                displayGrid('allSeriesGrid', data);
+                displayGrid('trendingSeries', data.slice(0, 10)); // Home grid
+                displayGrid('allSeriesGrid', data); // Series page grid
                 allBanners.push(...data.filter(item => item.banner));
                 if (allBanners.length > 0) populateSlider(allBanners);
             });
@@ -328,7 +323,6 @@
                     document.getElementById('pointsDisplay').textContent = data.points || 0;
                     document.getElementById('profileName').textContent = data.name || currentUser.displayName || 'N/A';
                     document.getElementById('profileEmail').textContent = currentUser.email;
-                    
                     if (data.subscription && new Date(data.subscription.expiryDate) > new Date()) {
                         userSubscription = { isActive: true, plan: data.subscription.plan };
                         document.getElementById('profileSubscription').textContent = translations[currentLang].premiumTier;
@@ -350,7 +344,6 @@
                     container.innerHTML += `<div class="plan-card">
                         <h3 class="plan-name">${plan.name}</h3>
                         <p class="plan-price">${priceInPoints} <i class="fas fa-gem"></i> <span>/${plan.duration} ${currentLang === 'bn' ? 'দিন':'days'}</span></p>
-                        <ul class="plan-features">${plan.features.map(f => `<li><i class="fas fa-check"></i> ${f}</li>`).join('')}</ul>
                         <button class="btn btn-primary" onclick="purchaseSubscription('${key}', ${priceInPoints})">${translations[currentLang].purchaseBtn}</button>
                     </div>`;
                 });
@@ -411,7 +404,6 @@
             document.getElementById('seriesDetailsDesc').textContent = seriesData.description;
             const seasonList = document.getElementById('seasonList');
             seasonList.innerHTML = '';
-
             if (seriesData.seasons) {
                 const seasons = Object.values(seriesData.seasons);
                 seasons.forEach((season) => {
@@ -498,11 +490,11 @@
         }
 
         function startPointsTimer() {
-            stopPointsTimer(); // Ensure no multiple timers are running
+            stopPointsTimer();
             sessionPoints = 0;
             pointsInterval = setInterval(() => {
                 sessionPoints++;
-            }, 60000); // 1 point per minute
+            }, 60000);
         }
 
         function stopPointsTimer() {
@@ -532,57 +524,6 @@
                     else { alert(translations[currentLang].purchaseSuccess); }
                 });
             });
-        }
-
-        function createCarousel(containerId, contentArray) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-            if (contentArray.length === 0) return;
-            const carousel = document.createElement('div');
-            carousel.className = 'content-carousel';
-            contentArray.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'content-card';
-                card.innerHTML = `
-                    ${item.type === 'premium' ? '<div class="premium-badge"><i class="fas fa-star"></i></div>' : ''}
-                    <img src="${item.thumbnail}" alt="${item.title}" class="content-thumbnail">
-                    <h3 class="content-title">${item.title}</h3>`;
-                card.onclick = () => handleContentClick(item);
-                carousel.appendChild(card);
-            });
-            container.appendChild(carousel);
-            
-            let isDown = false, startX, scrollLeft, autoScrollInterval;
-            const startAutoScroll = () => {
-                clearInterval(autoScrollInterval);
-                autoScrollInterval = setInterval(() => {
-                    carousel.scrollBy({ left: 140, behavior: 'smooth' });
-                    if (carousel.scrollLeft >= carousel.scrollWidth - carousel.clientWidth - 1) {
-                        carousel.scrollTo({ left: 0, behavior: 'smooth' });
-                    }
-                }, 3000);
-            };
-            const startSlide = (e) => {
-                isDown = true; clearInterval(autoScrollInterval);
-                carousel.style.cursor = 'grabbing';
-                startX = (e.pageX || e.touches[0].pageX) - carousel.offsetLeft;
-                scrollLeft = carousel.scrollLeft;
-            };
-            const endSlide = () => { isDown = false; carousel.style.cursor = 'grab'; startAutoScroll(); };
-            const moveSlide = (e) => {
-                if (!isDown) return; e.preventDefault();
-                const x = (e.pageX || e.touches[0].pageX) - carousel.offsetLeft;
-                const walk = (x - startX) * 2;
-                carousel.scrollLeft = scrollLeft - walk;
-            };
-            carousel.addEventListener('mousedown', startSlide);
-            carousel.addEventListener('mouseleave', endSlide);
-            carousel.addEventListener('mouseup', endSlide);
-            carousel.addEventListener('mousemove', moveSlide);
-            carousel.addEventListener('touchstart', startSlide);
-            carousel.addEventListener('touchend', endSlide);
-            carousel.addEventListener('touchmove', moveSlide);
-            startAutoScroll();
         }
     </script>
 </body>
