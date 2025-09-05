@@ -32,12 +32,20 @@
         .slide-title { font-size: 22px; font-weight: bold; }
         .content-section { padding: 0 15px; margin-bottom: 30px; }
         .section-title { font-size: 18px; font-weight: 600; margin-bottom: 15px; }
-        .content-carousel { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; }
-        .content-carousel::-webkit-scrollbar { display: none; }
-        .content-card { flex: 0 0 130px; width: 130px; background-color: var(--card-color); border-radius: 8px; overflow: hidden; transition: transform 0.2s; cursor: pointer; }
+        
+        .carousel-wrapper { overflow: hidden; }
+        .content-carousel { display: flex; gap: 10px; padding-bottom: 10px; touch-action: pan-y; }
+        
+        .content-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .content-grid .content-card { width: 100%; }
+        
+        .content-card { position: relative; flex-shrink: 0; width: 130px; background-color: var(--card-color); border-radius: 8px; overflow: hidden; transition: transform 0.2s; cursor: pointer; }
         .content-card:hover { transform: scale(1.05); }
         .content-thumbnail { width: 100%; height: 180px; object-fit: cover; }
         .content-title { font-size: 14px; padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .premium-badge { position: absolute; top: 8px; right: 8px; background-color: #ffc107; color: #000; padding: 2px 6px; font-size: 10px; border-radius: 4px; font-weight: bold; }
+        .premium-badge .fa-star { font-size: 8px; }
+        
         .loader { border: 4px solid var(--card-color); border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; background-color: #1a1a1a; display: flex; justify-content: space-around; padding: 10px 0; z-index: 100; border-top: 1px solid #333; }
@@ -76,7 +84,6 @@
         .lang-switcher { display: flex; gap: 10px; margin-top: 20px; }
         .lang-btn { flex: 1; background-color: var(--card-color); color: #fff; }
         .lang-btn.active { background-color: var(--primary-color); }
-        /* Series Details Page */
         .series-details-header { width: 100%; height: 35vh; background-size: cover; background-position: center; position: relative; display: flex; flex-direction: column; justify-content: flex-end; }
         .series-details-header::after { content: ''; position: absolute; top:0; left:0; right:0; bottom:0; background: linear-gradient(180deg, rgba(20,20,20,0.4) 0%, rgba(20,20,20,1) 100%); }
         .series-details-title { z-index: 1; padding: 0 20px; font-size: 24px; font-weight: bold; }
@@ -89,6 +96,11 @@
         .episode-item { display: flex; align-items: center; gap: 15px; padding: 10px; background: var(--card-color); border-radius: 8px; margin-bottom: 10px; cursor: pointer; }
         .episode-thumb { width: 120px; height: 70px; object-fit: cover; border-radius: 4px; }
         .episode-title { font-weight: 500; }
+        .ad-container { margin: 20px 15px; display: flex; justify-content: center; align-items: center; }
+        .interstitial-ad-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: #000; }
+        .interstitial-ad-content { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        #adPlayer { width: 100%; height: auto; max-width: 100%; max-height: 100%; }
+        #skipAdBtn { display: none; position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.7); color: #fff; border: 1px solid #fff; padding: 8px 15px; border-radius: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -105,22 +117,24 @@
                     <div class="slider-container" id="slider"></div>
                     <div class="content-section">
                         <h2 class="section-title" data-lang-key="popularMovies"></h2>
-                        <div class="content-carousel" id="popularMovies"><div class="loader"></div></div>
+                        <div class="carousel-wrapper" id="popularMovies"><div class="loader"></div></div>
                     </div>
+                    <div class="ad-container" id="homeAdContainer"></div>
                     <div class="content-section">
                         <h2 class="section-title" data-lang-key="trendingSeries"></h2>
-                        <div class="content-carousel" id="trendingSeries"><div class="loader"></div></div>
+                        <div class="carousel-wrapper" id="trendingSeries"><div class="loader"></div></div>
                     </div>
                 </section>
                 <section id="moviesSection" style="display: none;">
                      <h2 class="page-header" data-lang-key="allMovies"></h2>
+                     <div class="ad-container" id="moviesAdContainer"></div>
                      <div class="content-section" id="allMoviesGrid"></div>
                 </section>
                 <section id="seriesSection" style="display: none;">
                     <h2 class="page-header" data-lang-key="allSeries"></h2>
+                    <div class="ad-container" id="seriesAdContainer"></div>
                     <div class="content-section" id="allSeriesGrid"></div>
                 </section>
-                <!-- New Series Details Section -->
                 <section id="seriesDetailsSection" style="display: none;">
                     <div class="page-header">
                         <i class="fas fa-arrow-left back-btn" id="seriesBackBtn"></i>
@@ -169,7 +183,7 @@
         </nav>
     </div>
 
-    <!-- Episode Details Modal -->
+    <!-- Modals -->
     <div id="detailsModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="closeModal"><i class="fas fa-times"></i></span>
@@ -177,9 +191,7 @@
                 <div class="details-banner" id="detailsBanner"></div>
                 <div class="details-info">
                     <h3 class="details-title" id="detailsTitle"></h3>
-                    <div class="details-meta">
-                        <span id="detailsRating"></span> | <span id="detailsGenre"></span>
-                    </div>
+                    <div class="details-meta"><span id="detailsRating"></span> | <span id="detailsGenre"></span></div>
                     <p class="details-desc" id="detailsDesc"></p>
                 </div>
                 <div class="details-actions">
@@ -187,33 +199,36 @@
                     <a href="#" target="_blank" class="btn btn-secondary" id="downloadBtn"><i class="fas fa-download"></i> <span data-lang-key="download"></span></a>
                 </div>
             </div>
-            <div class="player-view" id="playerView">
-                <iframe id="videoPlayerFrame" allow="fullscreen" allowfullscreen></iframe>
-            </div>
+            <div class="player-view" id="playerView"><iframe id="videoPlayerFrame" allow="fullscreen" allowfullscreen></iframe></div>
+        </div>
+    </div>
+    <div id="interstitialAdModal" class="interstitial-ad-modal">
+        <div class="interstitial-ad-content">
+            <video id="adPlayer" playsinline muted></video>
+            <button id="skipAdBtn">Skip Ad</button>
         </div>
     </div>
 
     <script>
         const firebaseConfig = {
-  apiKey: "AIzaSyAHmkJZuHL7Pq-KzWGQxfj6ih3UPouPKiY",
-  authDomain: "hd-film-17c7f.firebaseapp.com",
-  databaseURL: "https://hd-film-17c7f-default-rtdb.firebaseio.com",
-  projectId: "hd-film-17c7f",
-  storageBucket: "hd-film-17c7f.firebasestorage.app",
-  messagingSenderId: "583770082263",
-  appId: "1:583770082263:web:51040c907693012b275992"
-};
-        
+          apiKey: "AIzaSyAHmkJZuHL7Pq-KzWGQxfj6ih3UPouPKiY",
+          authDomain: "hd-film-17c7f.firebaseapp.com",
+          databaseURL: "https://hd-film-17c7f-default-rtdb.firebaseio.com",
+          projectId: "hd-film-17c7f",
+          storageBucket: "hd-film-17c7f.appspot.com",
+          messagingSenderId: "583770082263",
+          appId: "1:583770082263:web:51040c907693012b275992"
+        };
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const database = firebase.database();
 
         const translations = {
-            bn: { popularMovies: "জনপ্রিয় মুভি", trendingSeries: "ট্রেন্ডিং সিরিজ", allMovies: "সব মুভি", allSeries: "সব ওয়েব সিরিজ", subscriptionPlans: "সাবস্ক্রিপশন প্ল্যান", seriesDetails: "সিরিজ বিবরণ", myProfile: "আমার প্রোফাইল", profileNameLabel: "নাম:", profileEmailLabel: "ইমেইল:", profileSubLabel: "সাবস্ক্রিপশন:", adminPanel: "অ্যাডমিন প্যানেল", logout: "লগআউট", navHome: "হোম", navMovies: "মুভি", navSeries: "সিরিজ", navSubscribe: "সাবস্ক্রাইব", navProfile: "প্রোফাইল", play: "দেখুন", download: "ডাউনলোড", purchaseBtn: "পয়েন্ট দিয়ে কিনুন", freeTier: "ফ্রি", purchaseConfirm: (p) => `আপনি কি ${p} পয়েন্ট দিয়ে এই প্ল্যানটি কিনতে চান?`, purchaseSuccess: "সাবস্ক্রিপশন সফল হয়েছে!", purchaseError: "একটি সমস্যা হয়েছে।", insufficientPoints: "আপনার পর্যাপ্ত পয়েন্ট নেই।", planUnavailable: "প্ল্যানটি আর উপলব্ধ নেই।" },
-            en: { popularMovies: "Popular Movies", trendingSeries: "Trending Series", allMovies: "All Movies", allSeries: "All Web Series", subscriptionPlans: "Subscription Plans", seriesDetails: "Series Details", myProfile: "My Profile", profileNameLabel: "Name:", profileEmailLabel: "Email:", profileSubLabel: "Subscription:", adminPanel: "Admin Panel", logout: "Logout", navHome: "Home", navMovies: "Movies", navSeries: "Series", navSubscribe: "Subscribe", navProfile: "Profile", play: "Play", download: "Download", purchaseBtn: "Buy with Points", freeTier: "Free", purchaseConfirm: (p) => `Buy this plan for ${p} points?`, purchaseSuccess: "Subscription successful!", purchaseError: "An error occurred.", insufficientPoints: "Insufficient points.", planUnavailable: "Plan unavailable." }
+            bn: { popularMovies: "জনপ্রিয় মুভি", trendingSeries: "ট্রেন্ডিং সিরিজ", allMovies: "সব মুভি", allSeries: "সব ওয়েব সিরিজ", subscriptionPlans: "সাবস্ক্রিপশন প্ল্যান", seriesDetails: "সিরিজ বিবরণ", myProfile: "আমার প্রোফাইল", profileNameLabel: "নাম:", profileEmailLabel: "ইমেইল:", profileSubLabel: "সাবস্ক্রিপশন:", adminPanel: "অ্যাডমিন প্যানেল", logout: "লগআউট", navHome: "হোম", navMovies: "মুভি", navSeries: "সিরিজ", navSubscribe: "সাবস্ক্রাইব", navProfile: "প্রোফাইল", play: "দেখুন", download: "ডাউনলোড", purchaseBtn: "পয়েন্ট দিয়ে কিনুন", freeTier: "ফ্রি", premiumTier: "প্রিমিয়াম", premiumAccessMsg: "এই কন্টেন্টটি দেখতে সাবস্ক্রাইব করুন।", pointsEarnedMsg: (p) => `আপনি ${p} পয়েন্ট অর্জন করেছেন!`, purchaseConfirm: (p) => `আপনি কি ${p} পয়েন্ট দিয়ে এই প্ল্যানটি কিনতে চান?`, purchaseSuccess: "সাবস্ক্রিপশন সফল হয়েছে!", purchaseError: "একটি সমস্যা হয়েছে।", insufficientPoints: "আপনার পর্যাপ্ত পয়েন্ট নেই।", planUnavailable: "প্ল্যানটি আর উপলব্ধ নেই।" },
+            en: { popularMovies: "Popular Movies", trendingSeries: "Trending Series", allMovies: "All Movies", allSeries: "All Web Series", subscriptionPlans: "Subscription Plans", seriesDetails: "Series Details", myProfile: "My Profile", profileNameLabel: "Name:", profileEmailLabel: "Email:", profileSubLabel: "Subscription:", adminPanel: "Admin Panel", logout: "Logout", navHome: "Home", navMovies: "Movies", navSeries: "Series", navSubscribe: "Subscribe", navProfile: "Profile", play: "Play", download: "Download", purchaseBtn: "Buy with Points", freeTier: "Free", premiumTier: "Premium", premiumAccessMsg: "Subscribe to watch this content.", pointsEarnedMsg: (p) => `You have earned ${p} points!`, purchaseConfirm: (p) => `Buy this plan for ${p} points?`, purchaseSuccess: "Subscription successful!", purchaseError: "An error occurred.", insufficientPoints: "Insufficient points.", planUnavailable: "Plan unavailable." }
         };
 
-        let currentUser = null, slideIndex = 0, currentLang = 'bn', lastActiveSection = 'homeSection';
+        let currentUser = null, slideIndex = 0, currentLang = 'bn', lastActiveSection = 'homeSection', monetagAds = {}, pointsInterval = null, sessionPoints = 0, userSubscription = { isActive: false };
 
         document.addEventListener('DOMContentLoaded', () => {
             loadLanguage(); initAuth(); setupEventListeners();
@@ -227,15 +242,12 @@
         }
         
         function loadInitialData() {
-            checkAdminStatus(); loadUserData(); loadContent(); loadSubscriptionPlans();
+            checkAdminStatus(); loadUserData(); loadContent(); loadSubscriptionPlans(); loadAdSettings();
         }
 
         function setupEventListeners() {
             document.querySelectorAll('.nav-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const targetId = item.getAttribute('data-target');
-                    showSection(targetId);
-                });
+                item.addEventListener('click', () => { showSection(item.getAttribute('data-target')); });
             });
             document.getElementById('closeModal').addEventListener('click', closeDetailsModal);
             document.getElementById('langBnBtn').onclick = () => setLanguage('bn');
@@ -248,7 +260,6 @@
         function showSection(targetId) {
             document.querySelectorAll('main > section').forEach(section => section.style.display = 'none');
             document.getElementById(targetId).style.display = 'block';
-            
             if (targetId.endsWith('Section') && targetId !== 'seriesDetailsSection') {
                 lastActiveSection = targetId;
                 document.querySelectorAll('.nav-item').forEach(nav => {
@@ -264,7 +275,6 @@
                 const key = el.getAttribute('data-lang-key');
                 if (langStrings[key]) el.textContent = langStrings[key];
             });
-            document.documentElement.lang = lang;
             localStorage.setItem('language', lang);
             document.getElementById('langBnBtn').classList.toggle('active', lang === 'bn');
             document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
@@ -279,18 +289,35 @@
             });
         }
 
+        function loadAdSettings() {
+            database.ref('settings/monetagAds').once('value', s => {
+                if (s.val()) { monetagAds = s.val(); displayBannerAds(); }
+            });
+        }
+
+        function displayBannerAds() {
+            if (monetagAds.homeBanner) document.getElementById('homeAdContainer').innerHTML = monetagAds.homeBanner;
+            if (monetagAds.menuBanner) {
+                document.getElementById('moviesAdContainer').innerHTML = monetagAds.menuBanner;
+                document.getElementById('seriesAdContainer').innerHTML = monetagAds.menuBanner;
+            }
+        }
+
         function loadContent() {
-            const refs = { movies: 'allMoviesGrid', series: 'allSeriesGrid' };
             let allBanners = [];
-            Object.keys(refs).forEach(key => {
-                database.ref(key).once('value', snapshot => {
-                    const data = snapshot.val() ? Object.values(snapshot.val()) : [];
-                    displayCarousel(key === 'movies' ? 'popularMovies' : 'trendingSeries', data);
-                    displayCarousel(refs[key], data);
-                    const banners = data.filter(item => item.banner && item.banner.startsWith('http'));
-                    allBanners.push(...banners);
-                    if (allBanners.length > 0) populateSlider(allBanners);
-                });
+            database.ref('movies').on('value', s => {
+                const data = s.val() ? Object.values(s.val()) : [];
+                createCarousel('popularMovies', data);
+                displayGrid('allMoviesGrid', data);
+                allBanners.push(...data.filter(item => item.banner));
+                if (allBanners.length > 0) populateSlider(allBanners);
+            });
+            database.ref('series').on('value', s => {
+                const data = s.val() ? Object.values(s.val()) : [];
+                createCarousel('trendingSeries', data);
+                displayGrid('allSeriesGrid', data);
+                allBanners.push(...data.filter(item => item.banner));
+                if (allBanners.length > 0) populateSlider(allBanners);
             });
         }
         
@@ -301,8 +328,14 @@
                     document.getElementById('pointsDisplay').textContent = data.points || 0;
                     document.getElementById('profileName').textContent = data.name || currentUser.displayName || 'N/A';
                     document.getElementById('profileEmail').textContent = currentUser.email;
-                    const subPlan = (data.subscription?.plan) ? data.subscription.plan : translations[currentLang].freeTier;
-                    document.getElementById('profileSubscription').textContent = subPlan;
+                    
+                    if (data.subscription && new Date(data.subscription.expiryDate) > new Date()) {
+                        userSubscription = { isActive: true, plan: data.subscription.plan };
+                        document.getElementById('profileSubscription').textContent = translations[currentLang].premiumTier;
+                    } else {
+                        userSubscription = { isActive: false };
+                        document.getElementById('profileSubscription').textContent = translations[currentLang].freeTier;
+                    }
                 }
             });
         }
@@ -323,21 +356,24 @@
                 });
             });
         }
-
-        function displayCarousel(containerId, contentArray) {
+        
+        function displayGrid(containerId, contentArray) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
             if (contentArray.length === 0) return;
-            const carousel = document.createElement('div');
-            carousel.className = 'content-carousel';
+            const grid = document.createElement('div');
+            grid.className = 'content-grid';
             contentArray.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'content-card';
-                card.innerHTML = `<img src="${item.thumbnail}" alt="${item.title}" class="content-thumbnail"><h3 class="content-title">${item.title}</h3>`;
+                card.innerHTML = `
+                    ${item.type === 'premium' ? '<div class="premium-badge"><i class="fas fa-star"></i></div>' : ''}
+                    <img src="${item.thumbnail}" alt="${item.title}" class="content-thumbnail">
+                    <h3 class="content-title">${item.title}</h3>`;
                 card.onclick = () => handleContentClick(item);
-                carousel.appendChild(card);
+                grid.appendChild(card);
             });
-            container.appendChild(carousel);
+            container.appendChild(grid);
         }
 
         function populateSlider(contentArray) {
@@ -360,11 +396,13 @@
         }
         
         function handleContentClick(item) {
-            if (item.seasons) { // It's a series
-                showSeriesDetails(item);
-            } else { // It's a movie
-                showEpisodeDetails(item);
+            if (item.type === 'premium' && !userSubscription.isActive) {
+                alert(translations[currentLang].premiumAccessMsg);
+                showSection('subscriptionSection');
+                return;
             }
+            if (item.seasons) { showSeriesDetails(item); } 
+            else { showEpisodeDetails(item); }
         }
 
         function showSeriesDetails(seriesData) {
@@ -376,7 +414,7 @@
 
             if (seriesData.seasons) {
                 const seasons = Object.values(seriesData.seasons);
-                seasons.forEach((season, index) => {
+                seasons.forEach((season) => {
                     const tab = document.createElement('div');
                     tab.className = 'season-tab';
                     tab.textContent = season.title;
@@ -387,8 +425,7 @@
                     };
                     seasonList.appendChild(tab);
                 });
-                // Auto-select first season
-                seasonList.firstChild.click();
+                if(seasonList.firstChild) seasonList.firstChild.click();
             }
             showSection('seriesDetailsSection');
         }
@@ -397,15 +434,10 @@
             const episodeList = document.getElementById('episodeList');
             episodeList.innerHTML = '';
             if (!season.episodes) return;
-
             Object.values(season.episodes).forEach(episode => {
                 const item = document.createElement('div');
                 item.className = 'episode-item';
-                item.innerHTML = `
-                    <img src="${episode.thumbnail || seriesData.thumbnail}" class="episode-thumb">
-                    <div class="episode-info">
-                        <div class="episode-title">${episode.title}</div>
-                    </div>`;
+                item.innerHTML = `<img src="${episode.thumbnail || seriesData.thumbnail}" class="episode-thumb"><div class="episode-info"><div class="episode-title">${episode.title}</div></div>`;
                 item.onclick = () => showEpisodeDetails({ ...seriesData, ...episode });
                 episodeList.appendChild(item);
             });
@@ -417,23 +449,69 @@
             document.getElementById('detailsRating').textContent = item.rating ? `⭐ ${item.rating}` : '';
             document.getElementById('detailsGenre').textContent = item.genre ? item.genre.join(', ') : '';
             document.getElementById('detailsDesc').textContent = item.description;
-            document.getElementById('playBtn').onclick = () => playVideo(item.videoUrl);
-            document.getElementById('downloadBtn').href = item.videoUrl || '#';
+            document.getElementById('playBtn').onclick = () => showInterstitialAd(item);
+            document.getElementById('downloadBtn').href = item.downloadUrl || '#';
             document.getElementById('detailsView').style.display = 'flex';
             document.getElementById('playerView').style.display = 'none';
             document.getElementById('detailsModal').style.display = 'flex';
         }
         
+        function showInterstitialAd(item) {
+            if (!monetagAds.interstitial) { playVideo(item.videoUrl); return; }
+            const adModal = document.getElementById('interstitialAdModal');
+            const adPlayer = document.getElementById('adPlayer');
+            const skipBtn = document.getElementById('skipAdBtn');
+            adModal.style.display = 'block';
+            adPlayer.src = monetagAds.interstitial;
+            adPlayer.play();
+            const skipAdHandler = () => {
+                adPlayer.pause(); adModal.style.display = 'none';
+                adPlayer.removeEventListener('ended', skipAdHandler);
+                skipBtn.removeEventListener('click', skipAdHandler);
+                playVideo(item.videoUrl);
+            };
+            skipBtn.style.display = 'none';
+            setTimeout(() => { skipBtn.style.display = 'block'; }, 5000);
+            skipBtn.addEventListener('click', skipAdHandler);
+            adPlayer.addEventListener('ended', skipAdHandler);
+        }
+
         function playVideo(url) {
             if (!url) { alert('Video URL not found!'); return; }
             document.getElementById('videoPlayerFrame').src = url;
             document.getElementById('detailsView').style.display = 'none';
             document.getElementById('playerView').style.display = 'block';
+            startPointsTimer();
         }
 
         function closeDetailsModal() {
             document.getElementById('videoPlayerFrame').src = '';
             document.getElementById('detailsModal').style.display = 'none';
+            stopPointsTimer();
+        }
+
+        function awardPoints(amount) {
+            if (!currentUser || amount === 0) return;
+            const userRef = database.ref(`users/${currentUser.uid}/points`);
+            userRef.transaction(currentPoints => (currentPoints || 0) + amount);
+            alert(translations[currentLang].pointsEarnedMsg(amount));
+        }
+
+        function startPointsTimer() {
+            stopPointsTimer(); // Ensure no multiple timers are running
+            sessionPoints = 0;
+            pointsInterval = setInterval(() => {
+                sessionPoints++;
+            }, 60000); // 1 point per minute
+        }
+
+        function stopPointsTimer() {
+            clearInterval(pointsInterval);
+            pointsInterval = null;
+            if (sessionPoints > 0) {
+                awardPoints(sessionPoints);
+                sessionPoints = 0;
+            }
         }
 
         function purchaseSubscription(planId, priceInPoints) {
@@ -443,12 +521,10 @@
                 const plan = s.val();
                 if (!plan) { alert(translations[currentLang].planUnavailable); return; }
                 userRef.transaction(userData => {
-                    if (userData) {
-                        if ((userData.points || 0) >= priceInPoints) {
-                            userData.points -= priceInPoints;
-                            userData.subscription = { plan: plan.name, expiryDate: new Date(Date.now() + plan.duration * 24*60*60*1000).toISOString() };
-                        } else { return; }
-                    }
+                    if (userData && (userData.points || 0) >= priceInPoints) {
+                        userData.points -= priceInPoints;
+                        userData.subscription = { plan: plan.name, expiryDate: new Date(Date.now() + plan.duration * 24*60*60*1000).toISOString() };
+                    } else { return; }
                     return userData;
                 }, (error, committed) => {
                     if (error) { alert(translations[currentLang].purchaseError); }
@@ -456,6 +532,57 @@
                     else { alert(translations[currentLang].purchaseSuccess); }
                 });
             });
+        }
+
+        function createCarousel(containerId, contentArray) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            if (contentArray.length === 0) return;
+            const carousel = document.createElement('div');
+            carousel.className = 'content-carousel';
+            contentArray.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'content-card';
+                card.innerHTML = `
+                    ${item.type === 'premium' ? '<div class="premium-badge"><i class="fas fa-star"></i></div>' : ''}
+                    <img src="${item.thumbnail}" alt="${item.title}" class="content-thumbnail">
+                    <h3 class="content-title">${item.title}</h3>`;
+                card.onclick = () => handleContentClick(item);
+                carousel.appendChild(card);
+            });
+            container.appendChild(carousel);
+            
+            let isDown = false, startX, scrollLeft, autoScrollInterval;
+            const startAutoScroll = () => {
+                clearInterval(autoScrollInterval);
+                autoScrollInterval = setInterval(() => {
+                    carousel.scrollBy({ left: 140, behavior: 'smooth' });
+                    if (carousel.scrollLeft >= carousel.scrollWidth - carousel.clientWidth - 1) {
+                        carousel.scrollTo({ left: 0, behavior: 'smooth' });
+                    }
+                }, 3000);
+            };
+            const startSlide = (e) => {
+                isDown = true; clearInterval(autoScrollInterval);
+                carousel.style.cursor = 'grabbing';
+                startX = (e.pageX || e.touches[0].pageX) - carousel.offsetLeft;
+                scrollLeft = carousel.scrollLeft;
+            };
+            const endSlide = () => { isDown = false; carousel.style.cursor = 'grab'; startAutoScroll(); };
+            const moveSlide = (e) => {
+                if (!isDown) return; e.preventDefault();
+                const x = (e.pageX || e.touches[0].pageX) - carousel.offsetLeft;
+                const walk = (x - startX) * 2;
+                carousel.scrollLeft = scrollLeft - walk;
+            };
+            carousel.addEventListener('mousedown', startSlide);
+            carousel.addEventListener('mouseleave', endSlide);
+            carousel.addEventListener('mouseup', endSlide);
+            carousel.addEventListener('mousemove', moveSlide);
+            carousel.addEventListener('touchstart', startSlide);
+            carousel.addEventListener('touchend', endSlide);
+            carousel.addEventListener('touchmove', moveSlide);
+            startAutoScroll();
         }
     </script>
 </body>
