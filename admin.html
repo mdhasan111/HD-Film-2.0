@@ -222,7 +222,7 @@
             }
             database.ref(`users/${uid}/isAdmin`).once('value', s => {
                 if (s.val()) initializePanel();
-                else { alert('আপনার অ্যাডমিন এক্সেস নেই।'); window.location.href = 'user.html'; }
+                else { alert('আপনার অ্যাডমিন এক্সেস নেই।'); window.location.href = 'index.html'; }
             });
         }
         
@@ -244,7 +244,7 @@
             document.getElementById('fetchEpisodesFromTmdbBtn').addEventListener('click', fetchSeasonsFromTMDB);
             document.getElementById('apiSettingsForm').addEventListener('submit', saveApiSettings);
             document.getElementById('editEpisodeForm').addEventListener('submit', saveEpisodeChanges);
-            document.getElementById('backToUser').addEventListener('click', () => window.location.href = 'user.html');
+            document.getElementById('backToUser').addEventListener('click', () => window.location.href = 'index.html');
             document.getElementById('adminLogout').addEventListener('click', () => auth.signOut());
             document.getElementById('backToSeriesBtn').addEventListener('click', () => {
                 document.getElementById('episodeManagementSection').style.display = 'none';
