@@ -205,14 +205,16 @@
                 </div>
             </section>
             
-            <section id="adManagementSection" style="display: none;">
+             <section id="adManagementSection" style="display: none;">
                  <h2 class="form-title">বিজ্ঞাপন ম্যানেজমেন্ট</h2>
                  <div class="form-section">
-                    <h3 class="form-title">Monetag বিজ্ঞাপন সেটিংস</h3>
-                    <form id="monetagSettingsForm">
-                        <div class="form-group"><label>Interstitial Ad VAST Tag</label><textarea id="monetagInterstitial" class="form-textarea" placeholder="ভিডিওর আগে দেখানো বিজ্ঞাপনের VAST ট্যাগ"></textarea></div>
-                        <div class="form-group"><label>Homepage Banner Ad Code</label><textarea id="monetagHomeBanner" class="form-textarea" placeholder="হোমপেজের জন্য ব্যানার বিজ্ঞাপনের কোড"></textarea></div>
-                        <div class="form-group"><label>Menu Banner Ad Code</label><textarea id="monetagMenuBanner" class="form-textarea" placeholder="অন্যান্য পেজের জন্য ব্যানার বিজ্ঞাপনের কোড"></textarea></div>
+                    <h3 class="form-title">বিজ্ঞাপন সেটিংস</h3>
+                    <form id="adSettingsForm">
+                        <div class="form-group"><label>Telegram Mini App Ads</label><textarea id="adTelegram" class="form-textarea"></textarea></div>
+                        <div class="form-group"><label>Rewarded Interstitial (Video Pre-roll VAST)</label><textarea id="adRewardedInterstitial" class="form-textarea"></textarea></div>
+                        <div class="form-group"><label>In-app Interstitial (On-click Popup)</label><textarea id="adInAppInterstitial" class="form-textarea"></textarea></div>
+                        <div class="form-group"><label>Adsterra Banner (Homepage)</label><textarea id="adsterraHomeBanner" class="form-textarea"></textarea></div>
+                        <div class="form-group"><label>Adsterra Banner (Menu pages)</label><textarea id="adsterraMenuBanner" class="form-textarea"></textarea></div>
                         <button type="submit" class="btn btn-primary">বিজ্ঞাপন সেটিংস সংরক্ষণ</button>
                     </form>
                 </div>
@@ -256,7 +258,6 @@
           messagingSenderId: "583770082263",
           appId: "1:583770082263:web:51040c907693012b275992"
         };
-
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const database = firebase.database();
@@ -272,8 +273,7 @@
 
         function checkAdminStatus(uid) {
             if (ADMIN_UIDS.includes(uid)) {
-                initializePanel();
-                return;
+                initializePanel(); return;
             }
             database.ref(`users/${uid}/isAdmin`).once('value', s => {
                 if (s.val()) initializePanel();
@@ -301,7 +301,7 @@
             document.getElementById('fetchSeriesFromTmdbBtn').addEventListener('click', fetchSeriesFromTMDB);
             document.getElementById('fetchEpisodesFromTmdbBtn').addEventListener('click', fetchSeasonsFromTMDB);
             document.getElementById('apiSettingsForm').addEventListener('submit', saveApiSettings);
-            document.getElementById('monetagSettingsForm').addEventListener('submit', saveMonetagSettings);
+            document.getElementById('adSettingsForm').addEventListener('submit', saveAdSettings);
             document.getElementById('editEpisodeForm').addEventListener('submit', saveEpisodeChanges);
             document.getElementById('backToUser').addEventListener('click', () => window.location.href = 'index.html');
             document.getElementById('adminLogout').addEventListener('click', () => auth.signOut());
@@ -593,24 +593,28 @@
             database.ref('settings').update({ tmdbApiKey: apiKey }).then(() => alert('API কী সংরক্ষণ করা হয়েছে!'));
         }
 
-        function saveMonetagSettings(e) {
+        function saveAdSettings(e) {
             e.preventDefault();
             const adSettings = {
-                interstitial: document.getElementById('monetagInterstitial').value,
-                homeBanner: document.getElementById('monetagHomeBanner').value,
-                menuBanner: document.getElementById('monetagMenuBanner').value
+                telegram: document.getElementById('adTelegram').value,
+                rewardedInterstitial: document.getElementById('adRewardedInterstitial').value,
+                inAppInterstitial: document.getElementById('adInAppInterstitial').value,
+                adsterraHomeBanner: document.getElementById('adsterraHomeBanner').value,
+                adsterraMenuBanner: document.getElementById('adsterraMenuBanner').value
             };
-            database.ref('settings/monetagAds').update(adSettings).then(() => alert('বিজ্ঞাপন সেটিংস সংরক্ষণ করা হয়েছে!'));
+            database.ref('settings/ads').update(adSettings).then(() => alert('বিজ্ঞাপন সেটিংস সংরক্ষণ করা হয়েছে!'));
         }
 
         function loadSettings() {
             database.ref('settings').once('value', s => {
                 if(s.val()) {
                     document.getElementById('tmdbApiKey').value = s.val().tmdbApiKey || '';
-                    if (s.val().monetagAds) {
-                        document.getElementById('monetagInterstitial').value = s.val().monetagAds.interstitial || '';
-                        document.getElementById('monetagHomeBanner').value = s.val().monetagAds.homeBanner || '';
-                        document.getElementById('monetagMenuBanner').value = s.val().monetagAds.menuBanner || '';
+                    if (s.val().ads) {
+                        document.getElementById('adTelegram').value = s.val().ads.telegram || '';
+                        document.getElementById('adRewardedInterstitial').value = s.val().ads.rewardedInterstitial || '';
+                        document.getElementById('adInAppInterstitial').value = s.val().ads.inAppInterstitial || '';
+                        document.getElementById('adsterraHomeBanner').value = s.val().ads.adsterraHomeBanner || '';
+                        document.getElementById('adsterraMenuBanner').value = s.val().ads.adsterraMenuBanner || '';
                     }
                 }
             });
