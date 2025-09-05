@@ -296,12 +296,23 @@
                 if (s.val()) { adSettings = s.val(); displayBannerAds(); }
             });
         }
+        
+        function executeScriptTag(container, htmlString) {
+            container.innerHTML = htmlString;
+            const scripts = Array.from(container.getElementsByTagName("script"));
+            scripts.forEach(oldScript => {
+                const newScript = document.createElement("script");
+                Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                oldScript.parentNode.replaceChild(newScript, oldScript);
+            });
+        }
 
         function displayBannerAds() {
-            if (adSettings.adsterraHomeBanner) document.getElementById('homeAdContainer').innerHTML = adSettings.adsterraHomeBanner;
+            if (adSettings.adsterraHomeBanner) executeScriptTag(document.getElementById('homeAdContainer'), adSettings.adsterraHomeBanner);
             if (adSettings.adsterraMenuBanner) {
-                document.getElementById('moviesAdContainer').innerHTML = adSettings.adsterraMenuBanner;
-                document.getElementById('seriesAdContainer').innerHTML = adSettings.adsterraMenuBanner;
+                executeScriptTag(document.getElementById('moviesAdContainer'), adSettings.adsterraMenuBanner);
+                executeScriptTag(document.getElementById('seriesAdContainer'), adSettings.adsterraMenuBanner);
             }
         }
 
@@ -406,18 +417,18 @@
                 else { showEpisodeDetails(item); }
             });
         }
-
+        
         function showOnClickInterstitial(callback) {
             if (adSettings.inAppInterstitial) {
                 const modal = document.getElementById('popupAdModal');
                 const container = document.getElementById('popupAdContainer');
-                container.innerHTML = adSettings.inAppInterstitial;
+                executeScriptTag(container, adSettings.inAppInterstitial);
                 modal.style.display = 'flex';
                 document.getElementById('closePopupAdBtn').onclick = () => {
                     modal.style.display = 'none';
                     container.innerHTML = '';
                     callback();
-                }
+                };
             } else {
                 callback();
             }
