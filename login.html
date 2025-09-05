@@ -316,8 +316,8 @@ const firebaseConfig = {
         function checkAuthState() {
             auth.onAuthStateChanged(user => {
                 if (user) {
-                    // ইউজার লগইন থাকলে user.html-এ রিডাইরেক্ট
-                    window.location.href = 'user.html';
+                    // ইউজার লগইন থাকলে index.html-এ রিডাইরেক্ট
+                    window.location.href = 'index.html';
                 }
             });
         }
@@ -394,7 +394,7 @@ const firebaseConfig = {
                     // লগইন সফল
                     const user = userCredential.user;
                     console.log('লগইন সফল:', user);
-                    // user.html-এ রিডাইরেক্ট হবে auth state change listener এর মাধ্যমে
+                    // index.html-এ রিডাইরেক্ট হবে auth state change listener এর মাধ্যমে
                 })
                 .catch((error) => {
                     setLoading(loginBtn, loginLoader, false);
@@ -473,7 +473,7 @@ const firebaseConfig = {
                     
                     // অটোমেটিক লগইন এবং রিডাইরেক্ট
                     setTimeout(() => {
-                        window.location.href = 'user.html';
+                        window.location.href = 'index.html';
                     }, 1500);
                 })
                 .catch((error) => {
