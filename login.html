@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>সিনেমা হাব - লগইন</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <style>
+        /* সাধারণ স্টাইল */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f0f0f 0%, #2a2a2a 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background-color: rgba(26, 26, 26, 0.9);
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* লোগো স্টাইল */
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo h1 {
+            font-size: 28px;
+            color: #e50914;
+            margin-bottom: 10px;
+        }
+        
+        .logo p {
+            font-size: 14px;
+            color: #aaa;
+        }
+        
+        /* ফর্ম স্টাইল */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #ddd;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            background-color: #333;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 16px;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #e50914;
+        }
+        
+        /* বাটন স্টাইল */
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: #e50914;
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            background-color: #f40612;
+        }
+        
+        .btn-secondary {
+            background-color: #3a3a3a;
+            color: #fff;
+            margin-top: 10px;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #4a4a4a;
+        }
+        
+        /* লিঙ্ক স্টাইল */
+        .form-links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .form-links a {
+            color: #e50914;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .form-links a:hover {
+            text-decoration: underline;
+        }
+        
+        /* ত্রুটি বার্তা */
+        .error-message {
+            background-color: rgba(229, 9, 20, 0.2);
+            color: #ff6b6b;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+            text-align: center;
+        }
+        
+        /* সাফল্য বার্তা */
+        .success-message {
+            background-color: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+            text-align: center;
+        }
+        
+        /* রেজিস্ট্রেশন ফর্ম */
+        #registerForm {
+            display: none;
+        }
+        
+        /* লোডিং স্পিনার */
+        .loader {
+            border: 3px solid #333;
+            border-top: 3px solid #e50914;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+            display: none;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* রেস্পন্সিভ ডিজাইন */
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .logo h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- লোগো -->
+        <div class="logo">
+            <h1>সিনেমা হাব</h1>
+            <p>আপনার পছন্দের মুভি এবং সিরিজের unlimited এক্সেস</p>
+        </div>
+        
+        <!-- ত্রুটি বার্তা -->
+        <div class="error-message" id="errorMessage"></div>
+        
+        <!-- সাফল্য বার্তা -->
+        <div class="success-message" id="successMessage"></div>
+        
+        <!-- লগইন ফর্ম -->
+        <form id="loginForm">
+            <div class="form-group">
+                <label class="form-label">ইমেইল</label>
+                <input type="email" id="loginEmail" class="form-input" placeholder="আপনার ইমেইল লিখুন" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">পাসওয়ার্ড</label>
+                <input type="password" id="loginPassword" class="form-input" placeholder="আপনার পাসওয়ার্ড লিখুন" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="loginBtn">
+                লগইন
+            </button>
+            
+            <div class="loader" id="loginLoader"></div>
+            
+            <div class="form-links">
+                <a href="#" id="showRegister">একাউন্ট তৈরি করুন</a> | 
+                <a href="#" id="forgotPassword">পাসওয়ার্ড ভুলে গেছেন?</a>
+            </div>
+        </form>
+        
+        <!-- রেজিস্ট্রেশন ফর্ম -->
+        <form id="registerForm">
+            <div class="form-group">
+                <label class="form-label">নাম</label>
+                <input type="text" id="registerName" class="form-input" placeholder="আপনার পুরো নাম লিখুন" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">ইমেইল</label>
+                <input type="email" id="registerEmail" class="form-input" placeholder="আপনার ইমেইল লিখুন" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">পасওয়ার্ড</label>
+                <input type="password" id="registerPassword" class="form-input" placeholder="কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড" required minlength="6">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">পাসওয়ার্ড নিশ্চিত করুন</label>
+                <input type="password" id="registerConfirmPassword" class="form-input" placeholder="পাসওয়ার্ডটি আবার লিখুন" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="registerBtn">
+                রেজিস্টার
+            </button>
+            
+            <div class="loader" id="registerLoader"></div>
+            
+            <div class="form-links">
+                <a href="#" id="showLogin">ইতিমধ্যে একাউন্ট আছে? লগইন করুন</a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Firebase কনফিগারেশন -->
+    <script>
+        // Firebase কনফিগারেশন
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDeWqL1bui0XpE-mVO2PaAq2ET97Bh5YZ0",
+  authDomain: "hd-film-de26b.firebaseapp.com",
+  databaseURL: "https://hd-film-de26b-default-rtdb.firebaseio.com",
+  projectId: "hd-film-de26b",
+  storageBucket: "hd-film-de26b.firebasestorage.app",
+  messagingSenderId: "357901829578",
+  appId: "1:357901829578:web:651ff535de4db68d843b33",
+  measurementId: "G-47FD0STFK0"
+};
+        
+        // Firebase ইনিশিয়ালাইজ
+        firebase.initializeApp(firebaseConfig);
+        
+        // Firebase রেফারেন্স
+        const auth = firebase.auth();
+        const database = firebase.database();
+    </script>
+    
+    <!-- লগইন সিস্টেম জাভাস্ক্রিপ্ট -->
+    <script>
+        // DOM এলিমেন্টস
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const showRegisterLink = document.getElementById('showRegister');
+        const showLoginLink = document.getElementById('showLogin');
+        const forgotPasswordLink = document.getElementById('forgotPassword');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const loginLoader = document.getElementById('loginLoader');
+        const registerLoader = document.getElementById('registerLoader');
+        const loginBtn = document.getElementById('loginBtn');
+        const registerBtn = document.getElementById('registerBtn');
+        
+        // অ্যাপ্লিকেশন ইনিশিয়ালাইজেশন
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            checkAuthState();
+        });
+        
+        // ইভেন্ট লিসেনার সেটআপ
+        function setupEventListeners() {
+            // ফর্ম সাবমিশন
+            loginForm.addEventListener('submit', loginUser);
+            registerForm.addEventListener('submit', registerUser);
+            
+            // ফর্ম স্যুইচ
+            showRegisterLink.addEventListener('click', showRegisterForm);
+            showLoginLink.addEventListener('click', showLoginForm);
+            
+            // পাসওয়ার্ড রিসেট
+            forgotPasswordLink.addEventListener('click', resetPassword);
+        }
+        
+        // অথেন্টিকেশন স্টেট চেক
+        function checkAuthState() {
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    // ইউজার লগইন থাকলে user.html-এ রিডাইরেক্ট
+                    window.location.href = 'user.html';
+                }
+            });
+        }
+        
+        // রেজিস্ট্রেশন ফর্ম দেখানো
+        function showRegisterForm(e) {
+            e.preventDefault();
+            loginForm.style.display = 'none';
+            registerForm.style.display = 'block';
+            clearMessages();
+        }
+        
+        // লগইন ফর্ম দেখানো
+        function showLoginForm(e) {
+            e.preventDefault();
+            registerForm.style.display = 'none';
+            loginForm.style.display = 'block';
+            clearMessages();
+        }
+        
+        // ত্রুটি বার্তা দেখানো
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+        }
+        
+        // সাফল্য বার্তা দেখানো
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+        
+        // বার্তা ক্লিয়ার করা
+        function clearMessages() {
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+        }
+        
+        // লোডিং স্টেট সেট করা
+        function setLoading(button, loader, isLoading) {
+            if (isLoading) {
+                button.style.display = 'none';
+                loader.style.display = 'block';
+            } else {
+                button.style.display = 'block';
+                loader.style.display = 'none';
+            }
+        }
+        
+        // ইউজার লগইন
+        function loginUser(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            // ভ্যালিডেশন
+            if (!email || !password) {
+                showError('দয়া করে ইমেইল এবং পাসওয়ার্ড লিখুন');
+                return;
+            }
+            
+            setLoading(loginBtn, loginLoader, true);
+            clearMessages();
+            
+            // Firebase দিয়ে লগইন
+            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+                .then(() => {
+                    return auth.signInWithEmailAndPassword(email, password);
+                })
+                .then((userCredential) => {
+                    // লগইন সফল
+                    const user = userCredential.user;
+                    console.log('লগইন সফল:', user);
+                    // user.html-এ রিডাইরেক্ট হবে auth state change listener এর মাধ্যমে
+                })
+                .catch((error) => {
+                    setLoading(loginBtn, loginLoader, false);
+                    // লগইন ত্রুটি
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    
+                    if (errorCode === 'auth/user-not-found') {
+                        showError('এই ইমেইলে কোনো একাউন্ট নেই');
+                    } else if (errorCode === 'auth/wrong-password') {
+                        showError('পাসওয়ার্ড ভুল হয়েছে');
+                    } else {
+                        showError('লগইন করতে সমস্যা হয়েছে: ' + errorMessage);
+                    }
+                });
+        }
+        
+        // ইউজার রেজিস্ট্রেশন
+        function registerUser(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
+            
+            // ভ্যালিডেশন
+            if (!name || !email || !password || !confirmPassword) {
+                showError('দয়া করে সব fields পূরণ করুন');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showError('পাসওয়ার্ড মিলেনি');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showError('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে');
+                return;
+            }
+            
+            setLoading(registerBtn, registerLoader, true);
+            clearMessages();
+            
+            // Firebase দিয়ে রেজিস্ট্রেশন
+            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+                .then(() => {
+                    return auth.createUserWithEmailAndPassword(email, password);
+                })
+                .then((userCredential) => {
+                    // রেজিস্ট্রেশন সফল
+                    const user = userCredential.user;
+                    
+                    // ইউজার প্রোফাইল আপডেট
+                    return user.updateProfile({
+                        displayName: name
+                    }).then(() => {
+                        // Firebase Realtime Database-এ ইউজার ডেটা সেভ করা
+                        return database.ref('users/' + user.uid).set({
+                            name: name,
+                            email: email,
+                            points: 0,
+                            subscription: {
+                                plan: 'বেসিক',
+                                isActive: true,
+                                expiryDate: null
+                            },
+                            createdAt: Date.now()
+                        });
+                    });
+                })
+                .then(() => {
+                    // রেজিস্ট্রেশন সম্পূর্ণ
+                    showSuccess('একাউন্ট সফলভাবে তৈরি হয়েছে! লগইন করা হচ্ছে...');
+                    
+                    // অটোমেটিক লগইন এবং রিডাইরেক্ট
+                    setTimeout(() => {
+                        window.location.href = 'user.html';
+                    }, 1500);
+                })
+                .catch((error) => {
+                    setLoading(registerBtn, registerLoader, false);
+                    // রেজিস্ট্রেশন ত্রুটি
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    
+                    if (errorCode === 'auth/email-already-in-use') {
+                        showError('এই ইমেইলটি ইতিমধ্যে ব্যবহৃত হয়েছে');
+                    } else if (errorCode === 'auth/invalid-email') {
+                        showError('ইমেইলটি সঠিক নয়');
+                    } else if (errorCode === 'auth/weak-password') {
+                        showError('পাসওয়ার্ডটি খুব দুর্বল, শক্তিশালী পাসওয়ার্ড ব্যবহার করুন');
+                    } else {
+                        showError('রেজিস্ট্রেশন করতে সমস্যা হয়েছে: ' + errorMessage);
+                    }
+                });
+        }
+        
+        // পাসওয়ার্ড রিসেট
+        function resetPassword(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value;
+            
+            if (!email) {
+                showError('দয়া করে আপনার ইমেইলটি লিখুন');
+                return;
+            }
+            
+            clearMessages();
+            
+            // Firebase দিয়ে পাসওয়ার্ড রিসেট ইমেইল পাঠানো
+            auth.sendPasswordResetEmail(email)
+                .then(() => {
+                    showSuccess('পাসওয়ার্ড রিসেট লিঙ্কটি আপনার ইমেইলে পাঠানো হয়েছে');
+                })
+                .catch((error) => {
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    
+                    if (errorCode === 'auth/user-not-found') {
+                        showError('এই ইমেইলে কোনো একাউন্ট নেই');
+                    } else {
+                        showError('পাসওয়ার্ড রিসেট করতে সমস্যা হয়েছে: ' + errorMessage);
+                    }
+                });
+        }
+    </script>
+</body>
+</html>

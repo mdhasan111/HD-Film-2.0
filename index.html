@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyStream</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-color: #e50914; --background-color: #141414; --card-color: #1f1f1f;
+            --text-color: #ffffff; --text-muted: #8c8c8c;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #000; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--text-color); }
+        .mobile-frame { width: 100%; max-width: 420px; height: 100vh; max-height: 900px; background-color: var(--background-color); border-radius: 30px; border: 8px solid #333; box-shadow: 0 10px 40px rgba(0,0,0,0.5); position: relative; overflow: hidden; display: flex; flex-direction: column; }
+        .mobile-screen { width: 100%; height: 100%; overflow-y: auto; scroll-behavior: smooth; padding-bottom: 70px; }
+        .mobile-screen::-webkit-scrollbar { display: none; }
+        header { background: linear-gradient(180deg, rgba(20,20,20,0.8) 0%, rgba(20,20,20,0) 100%); padding: 20px 15px; display: flex; justify-content: flex-end; align-items: center; position: absolute; top: 0; left: 0; right: 0; z-index: 100; }
+        .user-actions { display: flex; align-items: center; gap: 10px; }
+        .points-display { background-color: rgba(0,0,0,0.5); padding: 5px 12px; border-radius: 20px; font-size: 14px; font-weight: 500; border: 1px solid var(--text-muted); }
+        .points-display .fa-gem { color: #ffc107; margin-right: 5px; }
+        .slider-container { width: 100%; height: 45vh; position: relative; margin-bottom: 20px; }
+        .slide { display: none; width: 100%; height: 100%; }
+        .slide img { width: 100%; height: 100%; object-fit: cover; }
+        .slide-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 20px; background: linear-gradient(0deg, rgba(20,20,20,1) 0%, rgba(20,20,20,0) 100%); }
+        .slide-title { font-size: 22px; font-weight: bold; }
+        .content-section { padding: 0 15px; margin-bottom: 30px; }
+        .section-title { font-size: 18px; font-weight: 600; margin-bottom: 15px; }
+        .content-carousel { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; }
+        .content-carousel::-webkit-scrollbar { display: none; }
+        .content-card { flex: 0 0 130px; width: 130px; background-color: var(--card-color); border-radius: 8px; overflow: hidden; transition: transform 0.2s; cursor: pointer; }
+        .content-card:hover { transform: scale(1.05); }
+        .content-thumbnail { width: 100%; height: 180px; object-fit: cover; }
+        .content-title { font-size: 14px; padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .loader { border: 4px solid var(--card-color); border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; background-color: #1a1a1a; display: flex; justify-content: space-around; padding: 10px 0; z-index: 100; border-top: 1px solid #333; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 12px; cursor: pointer; transition: color 0.2s; }
+        .nav-item.active, .nav-item:hover { color: var(--primary-color); }
+        .nav-icon { font-size: 20px; margin-bottom: 4px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.95); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { width: 100%; max-width: 800px; height: 100%; display: flex; flex-direction: column; background-color: #000; }
+        .close-modal { position: absolute; top: 15px; left: 15px; font-size: 24px; color: #fff; cursor: pointer; background: rgba(0,0,0,0.5); border-radius: 50%; width: 35px; height: 35px; display: flex; justify-content: center; align-items: center; z-index: 101; }
+        .details-view { flex-grow: 1; display: flex; flex-direction: column; }
+        .details-banner { width: 100%; height: 40vh; background-size: cover; background-position: center; position: relative; }
+        .details-banner::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 50%; background: linear-gradient(transparent, #000); }
+        .details-info { padding: 20px; flex-grow: 1; overflow-y: auto; }
+        .details-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+        .details-meta { color: var(--text-muted); margin-bottom: 15px; }
+        .details-desc { line-height: 1.6; }
+        .details-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px; background-color: #000; }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; font-size: 16px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .btn-primary { background-color: var(--primary-color); color: #fff; }
+        .btn-secondary { background-color: var(--card-color); color: #fff; }
+        .player-view { flex-grow: 1; display: none; }
+        .player-view iframe { width: 100%; height: 100%; border: none; }
+        .page-header { padding: 20px 15px; font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 15px; }
+        .back-btn { font-size: 20px; cursor: pointer; }
+        .plan-grid { display: grid; gap: 15px; padding: 0 15px; }
+        .plan-card { background-color: var(--card-color); padding: 20px; border-radius: 12px; }
+        .plan-name { font-size: 20px; font-weight: 600; color: var(--primary-color); }
+        .plan-price { font-size: 28px; font-weight: 700; margin: 10px 0; }
+        .plan-price span { font-size: 16px; font-weight: normal; }
+        .plan-features { list-style: none; margin: 15px 0; }
+        .plan-features li { margin-bottom: 8px; }
+        .plan-features .fa-check { color: #28a745; margin-right: 8px; }
+        .profile-info { padding: 0 15px; }
+        .profile-details p { background-color: var(--card-color); padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+        .profile-actions button { margin-top: 15px; }
+        .lang-switcher { display: flex; gap: 10px; margin-top: 20px; }
+        .lang-btn { flex: 1; background-color: var(--card-color); color: #fff; }
+        .lang-btn.active { background-color: var(--primary-color); }
+        /* Series Details Page */
+        .series-details-header { width: 100%; height: 35vh; background-size: cover; background-position: center; position: relative; display: flex; flex-direction: column; justify-content: flex-end; }
+        .series-details-header::after { content: ''; position: absolute; top:0; left:0; right:0; bottom:0; background: linear-gradient(180deg, rgba(20,20,20,0.4) 0%, rgba(20,20,20,1) 100%); }
+        .series-details-title { z-index: 1; padding: 0 20px; font-size: 24px; font-weight: bold; }
+        .series-details-desc { z-index: 1; padding: 10px 20px; color: var(--text-muted); font-size: 14px; }
+        .season-tabs { display: flex; gap: 10px; padding: 15px 20px; overflow-x: auto; background: var(--background-color); }
+        .season-tabs::-webkit-scrollbar { display: none; }
+        .season-tab { padding: 8px 15px; background: var(--card-color); border-radius: 20px; cursor: pointer; white-space: nowrap; }
+        .season-tab.active { background: var(--primary-color); color: #fff; }
+        .episode-list { padding: 0 20px 20px 20px; }
+        .episode-item { display: flex; align-items: center; gap: 15px; padding: 10px; background: var(--card-color); border-radius: 8px; margin-bottom: 10px; cursor: pointer; }
+        .episode-thumb { width: 120px; height: 70px; object-fit: cover; border-radius: 4px; }
+        .episode-title { font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="mobile-frame">
+        <div class="mobile-screen">
+            <header>
+                <div class="user-actions">
+                    <div class="points-display"><i class="fas fa-gem"></i> <span id="pointsDisplay">0</span></div>
+                </div>
+            </header>
+
+            <main>
+                <section id="homeSection">
+                    <div class="slider-container" id="slider"></div>
+                    <div class="content-section">
+                        <h2 class="section-title" data-lang-key="popularMovies"></h2>
+                        <div class="content-carousel" id="popularMovies"><div class="loader"></div></div>
+                    </div>
+                    <div class="content-section">
+                        <h2 class="section-title" data-lang-key="trendingSeries"></h2>
+                        <div class="content-carousel" id="trendingSeries"><div class="loader"></div></div>
+                    </div>
+                </section>
+                <section id="moviesSection" style="display: none;">
+                     <h2 class="page-header" data-lang-key="allMovies"></h2>
+                     <div class="content-section" id="allMoviesGrid"></div>
+                </section>
+                <section id="seriesSection" style="display: none;">
+                    <h2 class="page-header" data-lang-key="allSeries"></h2>
+                    <div class="content-section" id="allSeriesGrid"></div>
+                </section>
+                <!-- New Series Details Section -->
+                <section id="seriesDetailsSection" style="display: none;">
+                    <div class="page-header">
+                        <i class="fas fa-arrow-left back-btn" id="seriesBackBtn"></i>
+                        <span data-lang-key="seriesDetails"></span>
+                    </div>
+                    <div id="seriesDetailsContent">
+                        <div class="series-details-header" id="seriesDetailsHeader">
+                            <h2 class="series-details-title" id="seriesDetailsTitle"></h2>
+                            <p class="series-details-desc" id="seriesDetailsDesc"></p>
+                        </div>
+                        <div class="season-tabs" id="seasonList"></div>
+                        <div class="episode-list" id="episodeList"></div>
+                    </div>
+                </section>
+                <section id="subscriptionSection" class="content-section" style="display: none;">
+                    <h2 class="page-header" data-lang-key="subscriptionPlans"></h2>
+                    <div class="plan-grid" id="subscriptionPlansContainer"></div>
+                </section>
+                <section id="profileSection" class="content-section" style="display: none;">
+                    <h2 class="page-header" data-lang-key="myProfile"></h2>
+                    <div class="profile-info">
+                        <div class="profile-details">
+                            <p><strong data-lang-key="profileNameLabel"></strong> <span id="profileName"></span></p>
+                            <p><strong data-lang-key="profileEmailLabel"></strong> <span id="profileEmail"></span></p>
+                            <p><strong data-lang-key="profileSubLabel"></strong> <span id="profileSubscription"></span></p>
+                        </div>
+                        <div class="lang-switcher">
+                            <button class="btn lang-btn" id="langBnBtn">বাংলা</button>
+                            <button class="btn lang-btn" id="langEnBtn">English</button>
+                        </div>
+                        <div class="profile-actions">
+                            <button id="adminBtn" class="btn btn-secondary" style="display:none; margin-top: 20px;" data-lang-key="adminPanel"></button>
+                            <button id="logoutBtn" class="btn" data-lang-key="logout"></button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+        
+        <nav class="bottom-nav">
+            <div class="nav-item active" data-target="homeSection"><i class="nav-icon fas fa-home"></i><span data-lang-key="navHome"></span></div>
+            <div class="nav-item" data-target="moviesSection"><i class="nav-icon fas fa-film"></i><span data-lang-key="navMovies"></span></div>
+            <div class="nav-item" data-target="seriesSection"><i class="nav-icon fas fa-tv"></i><span data-lang-key="navSeries"></span></div>
+            <div class="nav-item" data-target="subscriptionSection"><i class="nav-icon fas fa-star"></i><span data-lang-key="navSubscribe"></span></div>
+            <div class="nav-item" data-target="profileSection"><i class="nav-icon fas fa-user"></i><span data-lang-key="navProfile"></span></div>
+        </nav>
+    </div>
+
+    <!-- Episode Details Modal -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeModal"><i class="fas fa-times"></i></span>
+            <div class="details-view" id="detailsView">
+                <div class="details-banner" id="detailsBanner"></div>
+                <div class="details-info">
+                    <h3 class="details-title" id="detailsTitle"></h3>
+                    <div class="details-meta">
+                        <span id="detailsRating"></span> | <span id="detailsGenre"></span>
+                    </div>
+                    <p class="details-desc" id="detailsDesc"></p>
+                </div>
+                <div class="details-actions">
+                    <button class="btn btn-primary" id="playBtn"><i class="fas fa-play"></i> <span data-lang-key="play"></span></button>
+                    <a href="#" target="_blank" class="btn btn-secondary" id="downloadBtn"><i class="fas fa-download"></i> <span data-lang-key="download"></span></a>
+                </div>
+            </div>
+            <div class="player-view" id="playerView">
+                <iframe id="videoPlayerFrame" allow="fullscreen" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDeWqL1bui0XpE-mVO2PaAq2ET97Bh5YZ0", authDomain: "hd-film-de26b.firebaseapp.com",
+            databaseURL: "https://hd-film-de26b-default-rtdb.firebaseio.com", projectId: "hd-film-de26b",
+            storageBucket: "hd-film-de26b.appspot.com", messagingSenderId: "357901829578",
+            appId: "1:357901829578:web:651ff535de4db68d843b33", measurementId: "G-47FD0STFK0"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        const translations = {
+            bn: { popularMovies: "জনপ্রিয় মুভি", trendingSeries: "ট্রেন্ডিং সিরিজ", allMovies: "সব মুভি", allSeries: "সব ওয়েব সিরিজ", subscriptionPlans: "সাবস্ক্রিপশন প্ল্যান", seriesDetails: "সিরিজ বিবরণ", myProfile: "আমার প্রোফাইল", profileNameLabel: "নাম:", profileEmailLabel: "ইমেইল:", profileSubLabel: "সাবস্ক্রিপশন:", adminPanel: "অ্যাডমিন প্যানেল", logout: "লগআউট", navHome: "হোম", navMovies: "মুভি", navSeries: "সিরিজ", navSubscribe: "সাবস্ক্রাইব", navProfile: "প্রোফাইল", play: "দেখুন", download: "ডাউনলোড", purchaseBtn: "পয়েন্ট দিয়ে কিনুন", freeTier: "ফ্রি", purchaseConfirm: (p) => `আপনি কি ${p} পয়েন্ট দিয়ে এই প্ল্যানটি কিনতে চান?`, purchaseSuccess: "সাবস্ক্রিপশন সফল হয়েছে!", purchaseError: "একটি সমস্যা হয়েছে।", insufficientPoints: "আপনার পর্যাপ্ত পয়েন্ট নেই।", planUnavailable: "প্ল্যানটি আর উপলব্ধ নেই।" },
+            en: { popularMovies: "Popular Movies", trendingSeries: "Trending Series", allMovies: "All Movies", allSeries: "All Web Series", subscriptionPlans: "Subscription Plans", seriesDetails: "Series Details", myProfile: "My Profile", profileNameLabel: "Name:", profileEmailLabel: "Email:", profileSubLabel: "Subscription:", adminPanel: "Admin Panel", logout: "Logout", navHome: "Home", navMovies: "Movies", navSeries: "Series", navSubscribe: "Subscribe", navProfile: "Profile", play: "Play", download: "Download", purchaseBtn: "Buy with Points", freeTier: "Free", purchaseConfirm: (p) => `Buy this plan for ${p} points?`, purchaseSuccess: "Subscription successful!", purchaseError: "An error occurred.", insufficientPoints: "Insufficient points.", planUnavailable: "Plan unavailable." }
+        };
+
+        let currentUser = null, slideIndex = 0, currentLang = 'bn', lastActiveSection = 'homeSection';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLanguage(); initAuth(); setupEventListeners();
+        });
+
+        function initAuth() {
+            auth.onAuthStateChanged(user => {
+                if (user) { currentUser = user; loadInitialData(); } 
+                else { window.location.href = 'login.html'; }
+            });
+        }
+        
+        function loadInitialData() {
+            checkAdminStatus(); loadUserData(); loadContent(); loadSubscriptionPlans();
+        }
+
+        function setupEventListeners() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const targetId = item.getAttribute('data-target');
+                    showSection(targetId);
+                });
+            });
+            document.getElementById('closeModal').addEventListener('click', closeDetailsModal);
+            document.getElementById('langBnBtn').onclick = () => setLanguage('bn');
+            document.getElementById('langEnBtn').onclick = () => setLanguage('en');
+            document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
+            document.getElementById('adminBtn').addEventListener('click', () => window.location.href = 'admin.html');
+            document.getElementById('seriesBackBtn').addEventListener('click', () => showSection(lastActiveSection));
+        }
+
+        function showSection(targetId) {
+            document.querySelectorAll('main > section').forEach(section => section.style.display = 'none');
+            document.getElementById(targetId).style.display = 'block';
+            
+            if (targetId.endsWith('Section') && targetId !== 'seriesDetailsSection') {
+                lastActiveSection = targetId;
+                document.querySelectorAll('.nav-item').forEach(nav => {
+                    nav.classList.toggle('active', nav.getAttribute('data-target') === targetId);
+                });
+            }
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            const langStrings = translations[lang];
+            document.querySelectorAll('[data-lang-key]').forEach(el => {
+                const key = el.getAttribute('data-lang-key');
+                if (langStrings[key]) el.textContent = langStrings[key];
+            });
+            document.documentElement.lang = lang;
+            localStorage.setItem('language', lang);
+            document.getElementById('langBnBtn').classList.toggle('active', lang === 'bn');
+            document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
+            loadSubscriptionPlans();
+        }
+
+        function loadLanguage() { setLanguage(localStorage.getItem('language') || 'bn'); }
+
+        function checkAdminStatus() {
+            database.ref(`users/${currentUser.uid}/isAdmin`).once('value', s => {
+                if (s.val()) document.getElementById('adminBtn').style.display = 'block';
+            });
+        }
+
+        function loadContent() {
+            const refs = { movies: 'allMoviesGrid', series: 'allSeriesGrid' };
+            let allBanners = [];
+            Object.keys(refs).forEach(key => {
+                database.ref(key).once('value', snapshot => {
+                    const data = snapshot.val() ? Object.values(snapshot.val()) : [];
+                    displayCarousel(key === 'movies' ? 'popularMovies' : 'trendingSeries', data);
+                    displayCarousel(refs[key], data);
+                    const banners = data.filter(item => item.banner && item.banner.startsWith('http'));
+                    allBanners.push(...banners);
+                    if (allBanners.length > 0) populateSlider(allBanners);
+                });
+            });
+        }
+        
+        function loadUserData() {
+            database.ref(`users/${currentUser.uid}`).on('value', s => {
+                const data = s.val();
+                if (data) {
+                    document.getElementById('pointsDisplay').textContent = data.points || 0;
+                    document.getElementById('profileName').textContent = data.name || currentUser.displayName || 'N/A';
+                    document.getElementById('profileEmail').textContent = currentUser.email;
+                    const subPlan = (data.subscription?.plan) ? data.subscription.plan : translations[currentLang].freeTier;
+                    document.getElementById('profileSubscription').textContent = subPlan;
+                }
+            });
+        }
+
+        function loadSubscriptionPlans() {
+            database.ref('subscriptionPlans').once('value', s => {
+                const container = document.getElementById('subscriptionPlansContainer');
+                container.innerHTML = '';
+                if (!s.val()) return;
+                Object.entries(s.val()).forEach(([key, plan]) => {
+                    const priceInPoints = plan.price * 10;
+                    container.innerHTML += `<div class="plan-card">
+                        <h3 class="plan-name">${plan.name}</h3>
+                        <p class="plan-price">${priceInPoints} <i class="fas fa-gem"></i> <span>/${plan.duration} ${currentLang === 'bn' ? 'দিন':'days'}</span></p>
+                        <ul class="plan-features">${plan.features.map(f => `<li><i class="fas fa-check"></i> ${f}</li>`).join('')}</ul>
+                        <button class="btn btn-primary" onclick="purchaseSubscription('${key}', ${priceInPoints})">${translations[currentLang].purchaseBtn}</button>
+                    </div>`;
+                });
+            });
+        }
+
+        function displayCarousel(containerId, contentArray) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            if (contentArray.length === 0) return;
+            const carousel = document.createElement('div');
+            carousel.className = 'content-carousel';
+            contentArray.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'content-card';
+                card.innerHTML = `<img src="${item.thumbnail}" alt="${item.title}" class="content-thumbnail"><h3 class="content-title">${item.title}</h3>`;
+                card.onclick = () => handleContentClick(item);
+                carousel.appendChild(card);
+            });
+            container.appendChild(carousel);
+        }
+
+        function populateSlider(contentArray) {
+            const slider = document.getElementById('slider');
+            slider.innerHTML = '';
+            contentArray.sort(() => 0.5 - Math.random()).slice(0, 5).forEach(item => {
+                slider.innerHTML += `<div class="slide"><img src="${item.banner}" alt="${item.title}"><div class="slide-content"><h2 class="slide-title">${item.title}</h2></div></div>`;
+            });
+            showSlides();
+        }
+
+        function showSlides() {
+            let slides = document.getElementsByClassName("slide");
+            if(slides.length === 0) return;
+            for (let i=0; i < slides.length; i++) slides[i].style.display = "none";
+            slideIndex++;
+            if (slideIndex > slides.length) slideIndex = 1;
+            slides[slideIndex-1].style.display = "block";
+            setTimeout(showSlides, 4000);
+        }
+        
+        function handleContentClick(item) {
+            if (item.seasons) { // It's a series
+                showSeriesDetails(item);
+            } else { // It's a movie
+                showEpisodeDetails(item);
+            }
+        }
+
+        function showSeriesDetails(seriesData) {
+            document.getElementById('seriesDetailsHeader').style.backgroundImage = `url(${seriesData.banner || seriesData.thumbnail})`;
+            document.getElementById('seriesDetailsTitle').textContent = seriesData.title;
+            document.getElementById('seriesDetailsDesc').textContent = seriesData.description;
+            const seasonList = document.getElementById('seasonList');
+            seasonList.innerHTML = '';
+
+            if (seriesData.seasons) {
+                const seasons = Object.values(seriesData.seasons);
+                seasons.forEach((season, index) => {
+                    const tab = document.createElement('div');
+                    tab.className = 'season-tab';
+                    tab.textContent = season.title;
+                    tab.onclick = () => {
+                        document.querySelectorAll('.season-tab').forEach(t => t.classList.remove('active'));
+                        tab.classList.add('active');
+                        displayEpisodes(season, seriesData);
+                    };
+                    seasonList.appendChild(tab);
+                });
+                // Auto-select first season
+                seasonList.firstChild.click();
+            }
+            showSection('seriesDetailsSection');
+        }
+
+        function displayEpisodes(season, seriesData) {
+            const episodeList = document.getElementById('episodeList');
+            episodeList.innerHTML = '';
+            if (!season.episodes) return;
+
+            Object.values(season.episodes).forEach(episode => {
+                const item = document.createElement('div');
+                item.className = 'episode-item';
+                item.innerHTML = `
+                    <img src="${episode.thumbnail || seriesData.thumbnail}" class="episode-thumb">
+                    <div class="episode-info">
+                        <div class="episode-title">${episode.title}</div>
+                    </div>`;
+                item.onclick = () => showEpisodeDetails({ ...seriesData, ...episode });
+                episodeList.appendChild(item);
+            });
+        }
+
+        function showEpisodeDetails(item) {
+            document.getElementById('detailsBanner').style.backgroundImage = `url(${item.banner || item.thumbnail})`;
+            document.getElementById('detailsTitle').textContent = item.title;
+            document.getElementById('detailsRating').textContent = item.rating ? `⭐ ${item.rating}` : '';
+            document.getElementById('detailsGenre').textContent = item.genre ? item.genre.join(', ') : '';
+            document.getElementById('detailsDesc').textContent = item.description;
+            document.getElementById('playBtn').onclick = () => playVideo(item.videoUrl);
+            document.getElementById('downloadBtn').href = item.videoUrl || '#';
+            document.getElementById('detailsView').style.display = 'flex';
+            document.getElementById('playerView').style.display = 'none';
+            document.getElementById('detailsModal').style.display = 'flex';
+        }
+        
+        function playVideo(url) {
+            if (!url) { alert('Video URL not found!'); return; }
+            document.getElementById('videoPlayerFrame').src = url;
+            document.getElementById('detailsView').style.display = 'none';
+            document.getElementById('playerView').style.display = 'block';
+        }
+
+        function closeDetailsModal() {
+            document.getElementById('videoPlayerFrame').src = '';
+            document.getElementById('detailsModal').style.display = 'none';
+        }
+
+        function purchaseSubscription(planId, priceInPoints) {
+            if (!confirm(translations[currentLang].purchaseConfirm(priceInPoints))) return;
+            const userRef = database.ref(`users/${currentUser.uid}`);
+            database.ref(`subscriptionPlans/${planId}`).once('value', s => {
+                const plan = s.val();
+                if (!plan) { alert(translations[currentLang].planUnavailable); return; }
+                userRef.transaction(userData => {
+                    if (userData) {
+                        if ((userData.points || 0) >= priceInPoints) {
+                            userData.points -= priceInPoints;
+                            userData.subscription = { plan: plan.name, expiryDate: new Date(Date.now() + plan.duration * 24*60*60*1000).toISOString() };
+                        } else { return; }
+                    }
+                    return userData;
+                }, (error, committed) => {
+                    if (error) { alert(translations[currentLang].purchaseError); }
+                    else if (!committed) { alert(translations[currentLang].insufficientPoints); }
+                    else { alert(translations[currentLang].purchaseSuccess); }
+                });
+            });
+        }
+    </script>
+</body>
+</html>
