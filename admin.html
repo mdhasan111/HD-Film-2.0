@@ -70,7 +70,7 @@
                 <li class="menu-item" data-target="movieManagementSection"><i class="fas fa-film"></i> মুভি ম্যানেজমেন্ট</li>
                 <li class="menu-item" data-target="seriesManagementSection"><i class="fas fa-tv"></i> সিরিজ ম্যানেজমেন্ট</li>
                 <li class="menu-item" data-target="subscriptionSection"><i class="fas fa-star"></i> সাবস্ক্রিপশন</li>
-                <li class="menu-item" data-target="adminManagementSection"><i class="fas fa-user-shield"></i> অ্যাডমিন</li>
+                <li class="menu-item" data-target="adManagementSection"><i class="fas fa-ad"></i> বিজ্ঞাপন ম্যানেজমেন্ট</li>
                 <li class="menu-item" data-target="settingsSection"><i class="fas fa-cog"></i> সেটিংস</li>
             </ul>
         </aside>
@@ -185,8 +185,39 @@
             </section>
 
             <!-- Other hidden sections -->
-            <section id="subscriptionSection" style="display: none;"><h2>সাবস্ক্রিপশন ম্যানেজমেন্ট</h2></section>
-            <section id="adminManagementSection" style="display: none;"><h2>অ্যাডমিন ম্যানেজমেন্ট</h2></section>
+            <section id="subscriptionSection" style="display: none;">
+                <h2 class="form-title">সাবস্ক্রিপশন ম্যানেজমেন্ট</h2>
+                <div class="form-section">
+                    <h3 class="form-title">নতুন প্ল্যান যোগ করুন</h3>
+                    <form id="subscriptionForm">
+                        <div class="form-group"><label>প্ল্যানের নাম</label><input type="text" id="planName" class="form-input" required></div>
+                        <div class="form-group"><label>মূল্য (টাকায়)</label><input type="number" id="planPrice" class="form-input" required></div>
+                        <div class="form-group"><label>সময়কাল (দিন)</label><input type="number" id="planDuration" class="form-input" required></div>
+                        <button type="submit" class="btn btn-primary">প্ল্যান সংরক্ষণ</button>
+                    </form>
+                </div>
+                <div class="form-section">
+                    <h3 class="form-title">বিদ্যমান প্ল্যান</h3>
+                    <table class="data-table">
+                        <thead><tr><th>প্ল্যানের নাম</th><th>মূল্য</th><th>সময়কাল</th><th>কর্ম</th></tr></thead>
+                        <tbody id="plansTable"></tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <section id="adManagementSection" style="display: none;">
+                 <h2 class="form-title">বিজ্ঞাপন ম্যানেজমেন্ট</h2>
+                 <div class="form-section">
+                    <h3 class="form-title">Monetag বিজ্ঞাপন সেটিংস</h3>
+                    <form id="monetagSettingsForm">
+                        <div class="form-group"><label>Interstitial Ad VAST Tag</label><textarea id="monetagInterstitial" class="form-textarea" placeholder="ভিডিওর আগে দেখানো বিজ্ঞাপনের VAST ট্যাগ"></textarea></div>
+                        <div class="form-group"><label>Homepage Banner Ad Code</label><textarea id="monetagHomeBanner" class="form-textarea" placeholder="হোমপেজের জন্য ব্যানার বিজ্ঞাপনের কোড"></textarea></div>
+                        <div class="form-group"><label>Menu Banner Ad Code</label><textarea id="monetagMenuBanner" class="form-textarea" placeholder="অন্যান্য পেজের জন্য ব্যানার বিজ্ঞাপনের কোড"></textarea></div>
+                        <button type="submit" class="btn btn-primary">বিজ্ঞাপন সেটিংস সংরক্ষণ</button>
+                    </form>
+                </div>
+            </section>
+
             <section id="settingsSection" style="display: none;">
                 <h2>সিস্টেম সেটিংস</h2>
                 <div class="form-section">
@@ -194,15 +225,6 @@
                     <form id="apiSettingsForm">
                         <div class="form-group"><label>TMDB API কী</label><input type="text" id="tmdbApiKey" class="form-input"></div>
                         <button type="submit" class="btn btn-primary">সেটিংস সংরক্ষণ</button>
-                    </form>
-                </div>
-                <div class="form-section">
-                    <h3 class="form-title">Monetag বিজ্ঞাপন সেটিংস</h3>
-                    <form id="monetagSettingsForm">
-                        <div class="form-group"><label>Interstitial Ad VAST Tag</label><textarea id="monetagInterstitial" class="form-textarea" placeholder="ভিডিওর আগে দেখানো বিজ্ঞাপনের VAST ট্যাগ"></textarea></div>
-                        <div class="form-group"><label>Homepage Banner Ad Code</label><textarea id="monetagHomeBanner" class="form-textarea" placeholder="হোমপেজের জন্য ব্যানার বিজ্ঞাপনের কোড"></textarea></div>
-                        <div class="form-group"><label>Menu Banner Ad Code</label><textarea id="monetagMenuBanner" class="form-textarea" placeholder="অন্যান্য পেজের জন্য ব্যানার বিজ্ঞাপনের কোড"></textarea></div>
-                        <button type="submit" class="btn btn-primary">বিজ্ঞাপন সেটিংস সংরক্ষণ</button>
                     </form>
                 </div>
             </section>
@@ -260,7 +282,7 @@
         }
         
         function initializePanel() {
-            loadDashboardData(); loadMovies(); loadSeries(); loadSettings();
+            loadDashboardData(); loadMovies(); loadSeries(); loadSettings(); loadSubscriptionPlans();
         }
 
         function setupEventListeners() {
@@ -273,6 +295,7 @@
             document.getElementById('movieForm').addEventListener('submit', saveMovie);
             document.getElementById('movieCancelBtn').addEventListener('click', resetMovieForm);
             document.getElementById('seriesForm').addEventListener('submit', saveSeries);
+            document.getElementById('subscriptionForm').addEventListener('submit', saveSubscriptionPlan);
             document.getElementById('addSeasonForm').addEventListener('submit', addSeason);
             document.getElementById('fetchMovieFromTmdbBtn').addEventListener('click', fetchMovieFromTMDB);
             document.getElementById('fetchSeriesFromTmdbBtn').addEventListener('click', fetchSeriesFromTMDB);
@@ -355,8 +378,7 @@
                 title: document.getElementById('movieTitle').value, description: document.getElementById('movieDescription').value,
                 rating: parseFloat(document.getElementById('movieRating').value), thumbnail: document.getElementById('movieThumbnail').value,
                 banner: document.getElementById('movieBanner').value, videoUrl: document.getElementById('movieVideo').value,
-                downloadUrl: document.getElementById('movieDownload').value,
-                type: document.getElementById('movieType').value,
+                downloadUrl: document.getElementById('movieDownload').value, type: document.getElementById('movieType').value,
             };
             const action = key ? 'আপডেট' : 'যোগ';
             const ref = key ? database.ref('movies/' + key) : database.ref('movies').push();
@@ -592,6 +614,37 @@
                     }
                 }
             });
+        }
+        
+        function saveSubscriptionPlan(e) {
+            e.preventDefault();
+            const plan = {
+                name: document.getElementById('planName').value,
+                price: parseFloat(document.getElementById('planPrice').value),
+                duration: parseInt(document.getElementById('planDuration').value),
+            };
+            database.ref('subscriptionPlans').push(plan).then(() => {
+                alert('প্ল্যান যোগ করা হয়েছে!');
+                e.target.reset();
+            });
+        }
+
+        function loadSubscriptionPlans() {
+            database.ref('subscriptionPlans').on('value', s => {
+                const table = document.getElementById('plansTable');
+                table.innerHTML = '';
+                s.forEach(cs => {
+                    const key = cs.key, data = cs.val();
+                    table.innerHTML += `<tr><td>${data.name}</td><td>${data.price} টাকা</td><td>${data.duration} দিন</td>
+                    <td><button class="action-btn delete-btn" onclick="deleteSubscriptionPlan('${key}')">ডিলিট</button></td></tr>`;
+                });
+            });
+        }
+        
+        function deleteSubscriptionPlan(key) {
+            if(confirm('আপনি কি এই প্ল্যানটি ডিলিট করতে চান?')) {
+                database.ref('subscriptionPlans/' + key).remove();
+            }
         }
     </script>
 </body>
