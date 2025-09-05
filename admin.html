@@ -193,16 +193,20 @@
     
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyDeWqL1bui0XpE-mVO2PaAq2ET97Bh5YZ0", authDomain: "hd-film-de26b.firebaseapp.com",
-            databaseURL: "https://hd-film-de26b-default-rtdb.firebaseio.com", projectId: "hd-film-de26b",
-            storageBucket: "hd-film-de26b.appspot.com", messagingSenderId: "357901829578",
-            appId: "1:357901829578:web:651ff535de4db68d843b33"
-        };
+  apiKey: "AIzaSyAHmkJZuHL7Pq-KzWGQxfj6ih3UPouPKiY",
+  authDomain: "hd-film-17c7f.firebaseapp.com",
+  databaseURL: "https://hd-film-17c7f-default-rtdb.firebaseio.com",
+  projectId: "hd-film-17c7f",
+  storageBucket: "hd-film-17c7f.firebasestorage.app",
+  messagingSenderId: "583770082263",
+  appId: "1:583770082263:web:51040c907693012b275992"
+};
+        
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const database = firebase.database();
 
-        const ADMIN_UIDS = ["s10ZHMM5NpR1PZaYVSY9U2EpRb52"];
+        const ADMIN_UIDS = ["iN4vn8hPXtfJqdALGkPK9h4CmVj1"];
         let currentSeriesKey = null;
         let currentSeasonKey = null;
 
