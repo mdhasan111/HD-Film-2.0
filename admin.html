@@ -96,6 +96,11 @@
             
             <section id="movieManagementSection" style="display: none;">
                 <div class="form-section">
+                    <h3 class="form-title">TMDB থেকে তথ্য আনুন</h3>
+                    <div class="form-group"><label>TMDB মুভি ID</label><input type="text" id="tmdbMovieId" class="form-input" placeholder="যেমন: 603"></div>
+                    <button id="fetchMovieFromTmdbBtn" class="btn btn-primary">তথ্য আনুন</button>
+                </div>
+                <div class="form-section">
                     <h3 class="form-title" id="movieFormTitle">নতুন মুভি যোগ করুন</h3>
                     <form id="movieForm">
                         <input type="hidden" id="movieKey">
@@ -120,6 +125,11 @@
             </section>
             
             <section id="seriesManagementSection" style="display: none;">
+                 <div class="form-section">
+                    <h3 class="form-title">TMDB থেকে তথ্য আনুন</h3>
+                    <div class="form-group"><label>TMDB সিরিজ ID</label><input type="text" id="tmdbSeriesId" class="form-input" placeholder="যেমন: 1399"></div>
+                    <button id="fetchSeriesFromTmdbBtn" class="btn btn-primary">তথ্য আনুন</button>
+                </div>
                  <div class="form-section">
                     <h3 class="form-title">নতুন সিরিজ যোগ করুন</h3>
                     <form id="seriesForm">
@@ -201,7 +211,7 @@
   messagingSenderId: "583770082263",
   appId: "1:583770082263:web:51040c907693012b275992"
 };
-        
+
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const database = firebase.database();
@@ -241,6 +251,8 @@
             document.getElementById('movieCancelBtn').addEventListener('click', resetMovieForm);
             document.getElementById('seriesForm').addEventListener('submit', saveSeries);
             document.getElementById('addSeasonForm').addEventListener('submit', addSeason);
+            document.getElementById('fetchMovieFromTmdbBtn').addEventListener('click', fetchMovieFromTMDB);
+            document.getElementById('fetchSeriesFromTmdbBtn').addEventListener('click', fetchSeriesFromTMDB);
             document.getElementById('fetchEpisodesFromTmdbBtn').addEventListener('click', fetchSeasonsFromTMDB);
             document.getElementById('apiSettingsForm').addEventListener('submit', saveApiSettings);
             document.getElementById('editEpisodeForm').addEventListener('submit', saveEpisodeChanges);
@@ -274,6 +286,43 @@
         }
         
         function logActivity(action, title) { database.ref('activityLogs').push({ action, title, timestamp: Date.now() }); }
+
+        async function fetchMovieFromTMDB() {
+            const tmdbId = document.getElementById('tmdbMovieId').value;
+            if (!tmdbId) { alert('অনুগ্রহ করে একটি TMDB মুভি ID দিন।'); return; }
+            this.textContent = 'লোড হচ্ছে...'; this.disabled = true;
+            try {
+                const apiKey = (await database.ref('settings/tmdbApiKey').once('value')).val();
+                if (!apiKey) throw new Error('TMDB API কী সেট করা নেই।');
+                const res = await fetch(`https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${apiKey}&language=bn-BD`);
+                const data = await res.json();
+                if (data.success === false) throw new Error(data.status_message);
+                document.getElementById('movieTitle').value = data.title || '';
+                document.getElementById('movieDescription').value = data.overview || '';
+                document.getElementById('movieRating').value = data.vote_average || 0;
+                document.getElementById('movieThumbnail').value = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : '';
+                document.getElementById('movieBanner').value = data.backdrop_path ? `https://image.tmdb.org/t/p/w1280${data.backdrop_path}` : '';
+                alert('তথ্য সফলভাবে আনা হয়েছে!');
+            } catch (error) { alert(`একটি ত্রুটি হয়েছে: ${error.message}`); } finally { this.textContent = 'তথ্য আনুন'; this.disabled = false; }
+        }
+
+        async function fetchSeriesFromTMDB() {
+            const tmdbId = document.getElementById('tmdbSeriesId').value;
+            if (!tmdbId) { alert('অনুগ্রহ করে একটি TMDB সিরিজ ID দিন।'); return; }
+            this.textContent = 'লোড হচ্ছে...'; this.disabled = true;
+            try {
+                const apiKey = (await database.ref('settings/tmdbApiKey').once('value')).val();
+                if (!apiKey) throw new Error('TMDB API কী সেট করা নেই।');
+                const res = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${apiKey}&language=bn-BD`);
+                const data = await res.json();
+                if (data.success === false) throw new Error(data.status_message);
+                document.getElementById('seriesTitle').value = data.name || '';
+                document.getElementById('seriesDescription').value = data.overview || '';
+                document.getElementById('seriesThumbnail').value = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : '';
+                document.getElementById('seriesBanner').value = data.backdrop_path ? `https://image.tmdb.org/t/p/w1280${data.backdrop_path}` : '';
+                alert('তথ্য সফলভাবে আনা হয়েছে!');
+            } catch (error) { alert(`একটি ত্রুটি হয়েছে: ${error.message}`); } finally { this.textContent = 'তথ্য আনুন'; this.disabled = false; }
+        }
 
         function saveMovie(e) {
             e.preventDefault();
@@ -368,7 +417,6 @@
             try {
                 const apiKey = (await database.ref('settings/tmdbApiKey').once('value')).val();
                 if (!apiKey) { throw new Error('TMDB API কী সেট করা নেই।'); }
-
                 const seriesRes = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${apiKey}`);
                 const seriesData = await seriesRes.json();
                 
@@ -379,10 +427,8 @@
                     
                     let episodes = {};
                     seasonDetails.episodes.forEach(ep => {
-                        const epKey = `episode_${ep.episode_number}`;
-                        episodes[epKey] = {
-                            title: `E${ep.episode_number}: ${ep.name}`,
-                            description: ep.overview,
+                        episodes[`episode_${ep.episode_number}`] = {
+                            title: `E${ep.episode_number}: ${ep.name}`, description: ep.overview,
                             thumbnail: ep.still_path ? `https://image.tmdb.org/t/p/w500${ep.still_path}` : '',
                             videoUrl: '', downloadUrl: ''
                         };
@@ -393,13 +439,8 @@
                 await database.ref(`series/${currentSeriesKey}/seasons`).set(seasonsData);
                 alert('সকল সিজন এবং এপিসোড সফলভাবে যোগ করা হয়েছে!');
                 logActivity('TMDB থেকে এপিসোড যোগ', seriesData.name);
-
-            } catch (error) {
-                alert(`একটি ত্রুটি হয়েছে: ${error.message}`);
-                console.error(error);
-            } finally {
-                this.textContent = 'তথ্য আনুন'; this.disabled = false;
-            }
+            } catch (error) { alert(`একটি ত্রুটি হয়েছে: ${error.message}`); } 
+            finally { this.textContent = 'তথ্য আনুন'; this.disabled = false; }
         }
 
         function manageEpisodes(key) {
@@ -459,7 +500,7 @@
         }
         
         function openEditEpisodeModal(seriesKey, seasonKey, episodeKey) {
-            currentSeasonKey = seasonKey; // Store season key for saving
+            currentSeasonKey = seasonKey;
             database.ref(`series/${seriesKey}/seasons/${seasonKey}/episodes/${episodeKey}`).once('value', s => {
                 const data = s.val();
                 document.getElementById('editEpisodeKey').value = episodeKey;
