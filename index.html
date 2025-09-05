@@ -10,7 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+    <!-- Monetag SDK will be loaded dynamically -->
     <style>
         :root {
             --primary-color: #e50914; --background-color: #141414; --card-color: #1f1f1f;
@@ -89,13 +89,6 @@
         .episode-thumb { width: 120px; height: 70px; object-fit: cover; border-radius: 4px; }
         .episode-title { font-weight: 500; }
         .ad-container { margin: 20px 15px; display: flex; justify-content: center; align-items: center; }
-        .video-ad-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: #000; }
-        .video-ad-content { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
-        #adPlayer { width: 100%; height: auto; max-width: 100%; max-height: 100%; }
-        #skipAdBtn { display: none; position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.7); color: #fff; border: 1px solid #fff; padding: 8px 15px; border-radius: 20px; cursor: pointer; }
-        .popup-ad-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
-        .popup-ad-content { position: relative; }
-        .close-popup-ad { position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; border-radius: 50%; background: #000; color: #fff; border: 2px solid #fff; cursor: pointer; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -197,19 +190,7 @@
             <div class="player-view" id="playerView"><iframe id="videoPlayerFrame" allow="fullscreen" allowfullscreen></iframe></div>
         </div>
     </div>
-    <div id="videoAdModal" class="video-ad-modal">
-        <div class="video-ad-content">
-            <video id="adPlayer" playsinline muted></video>
-            <button id="skipAdBtn">Skip Ad</button>
-        </div>
-    </div>
-    <div id="popupAdModal" class="popup-ad-modal">
-        <div class="popup-ad-content">
-            <button class="close-popup-ad" id="closePopupAdBtn">&times;</button>
-            <div id="popupAdContainer"></div>
-        </div>
-    </div>
-
+    
     <script>
         const firebaseConfig = {
           apiKey: "AIzaSyAHmkJZuHL7Pq-KzWGQxfj6ih3UPouPKiY",
@@ -251,7 +232,6 @@
                 item.addEventListener('click', () => { showSection(item.getAttribute('data-target')); });
             });
             document.getElementById('closeModal').addEventListener('click', closeDetailsModal);
-            document.getElementById('closePopupAdBtn').addEventListener('click', () => document.getElementById('popupAdModal').style.display = 'none');
             document.getElementById('langBnBtn').onclick = () => setLanguage('bn');
             document.getElementById('langEnBtn').onclick = () => setLanguage('en');
             document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
@@ -293,7 +273,17 @@
 
         function loadAdSettings() {
             database.ref('settings/ads').once('value', s => {
-                if (s.val()) { adSettings = s.val(); displayBannerAds(); }
+                if (s.val()) { 
+                    adSettings = s.val(); 
+                    if (adSettings.rewardedInterstitial) { // Load Monetag SDK only if a zone is set
+                        const script = document.createElement('script');
+                        script.src = `//libtl.com/sdk.js`;
+                        script.setAttribute('data-zone', adSettings.rewardedInterstitial); // Use one zone ID for the SDK
+                        script.onload = () => console.log('Monetag SDK loaded.');
+                        document.head.appendChild(script);
+                    }
+                    displayBannerAds();
+                }
             });
         }
         
@@ -419,16 +409,9 @@
         }
         
         function showOnClickInterstitial(callback) {
-            if (adSettings.inAppInterstitial) {
-                const modal = document.getElementById('popupAdModal');
-                const container = document.getElementById('popupAdContainer');
-                executeScriptTag(container, adSettings.inAppInterstitial);
-                modal.style.display = 'flex';
-                document.getElementById('closePopupAdBtn').onclick = () => {
-                    modal.style.display = 'none';
-                    container.innerHTML = '';
-                    callback();
-                };
+            const zoneId = adSettings.inAppInterstitial;
+            if (zoneId && typeof window[`show_${zoneId}`] === 'function') {
+                window[`show_${zoneId}`]({ type: 'inApp' }).then(callback).catch(() => callback());
             } else {
                 callback();
             }
@@ -485,23 +468,12 @@
         }
         
         function showVideoPreRollAd(item) {
-            if (!adSettings.rewardedInterstitial) { playVideo(item.videoUrl); return; }
-            const adModal = document.getElementById('videoAdModal');
-            const adPlayer = document.getElementById('adPlayer');
-            const skipBtn = document.getElementById('skipAdBtn');
-            adModal.style.display = 'block';
-            adPlayer.src = adSettings.rewardedInterstitial;
-            adPlayer.play();
-            const skipAdHandler = () => {
-                adPlayer.pause(); adModal.style.display = 'none';
-                adPlayer.removeEventListener('ended', skipAdHandler);
-                skipBtn.removeEventListener('click', skipAdHandler);
+            const zoneId = adSettings.rewardedInterstitial;
+            if (zoneId && typeof window[`show_${zoneId}`] === 'function') {
+                window[`show_${zoneId}`]().then(() => playVideo(item.videoUrl)).catch(() => playVideo(item.videoUrl));
+            } else {
                 playVideo(item.videoUrl);
-            };
-            skipBtn.style.display = 'none';
-            setTimeout(() => { skipBtn.style.display = 'block'; }, 5000);
-            skipBtn.addEventListener('click', skipAdHandler);
-            adPlayer.addEventListener('ended', skipAdHandler);
+            }
         }
 
         function playVideo(url) {
