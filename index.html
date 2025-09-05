@@ -70,9 +70,6 @@
         .plan-name { font-size: 20px; font-weight: 600; color: var(--primary-color); }
         .plan-price { font-size: 28px; font-weight: 700; margin: 10px 0; }
         .plan-price span { font-size: 16px; font-weight: normal; }
-        .plan-features { list-style: none; margin: 15px 0; }
-        .plan-features li { margin-bottom: 8px; }
-        .plan-features .fa-check { color: #28a745; margin-right: 8px; }
         .profile-info { padding: 0 15px; }
         .profile-details p { background-color: var(--card-color); padding: 15px; border-radius: 8px; margin-bottom: 10px; }
         .profile-actions button { margin-top: 15px; }
@@ -92,10 +89,13 @@
         .episode-thumb { width: 120px; height: 70px; object-fit: cover; border-radius: 4px; }
         .episode-title { font-weight: 500; }
         .ad-container { margin: 20px 15px; display: flex; justify-content: center; align-items: center; }
-        .interstitial-ad-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: #000; }
-        .interstitial-ad-content { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        .video-ad-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: #000; }
+        .video-ad-content { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
         #adPlayer { width: 100%; height: auto; max-width: 100%; max-height: 100%; }
         #skipAdBtn { display: none; position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.7); color: #fff; border: 1px solid #fff; padding: 8px 15px; border-radius: 20px; cursor: pointer; }
+        .popup-ad-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
+        .popup-ad-content { position: relative; }
+        .close-popup-ad { position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; border-radius: 50%; background: #000; color: #fff; border: 2px solid #fff; cursor: pointer; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -197,10 +197,16 @@
             <div class="player-view" id="playerView"><iframe id="videoPlayerFrame" allow="fullscreen" allowfullscreen></iframe></div>
         </div>
     </div>
-    <div id="interstitialAdModal" class="interstitial-ad-modal">
-        <div class="interstitial-ad-content">
+    <div id="videoAdModal" class="video-ad-modal">
+        <div class="video-ad-content">
             <video id="adPlayer" playsinline muted></video>
             <button id="skipAdBtn">Skip Ad</button>
+        </div>
+    </div>
+    <div id="popupAdModal" class="popup-ad-modal">
+        <div class="popup-ad-content">
+            <button class="close-popup-ad" id="closePopupAdBtn">&times;</button>
+            <div id="popupAdContainer"></div>
         </div>
     </div>
 
@@ -223,7 +229,7 @@
             en: { popularMovies: "Popular Movies", trendingSeries: "Trending Series", allMovies: "All Movies", allSeries: "All Web Series", subscriptionPlans: "Subscription Plans", seriesDetails: "Series Details", myProfile: "My Profile", profileNameLabel: "Name:", profileEmailLabel: "Email:", profileSubLabel: "Subscription:", adminPanel: "Admin Panel", logout: "Logout", navHome: "Home", navMovies: "Movies", navSeries: "Series", navSubscribe: "Subscribe", navProfile: "Profile", play: "Play", download: "Download", purchaseBtn: "Buy with Points", freeTier: "Free", premiumTier: "Premium", premiumAccessMsg: "Subscribe to watch this content.", pointsEarnedMsg: (p) => `You have earned ${p} points!`, purchaseConfirm: (p) => `Buy this plan for ${p} points?`, purchaseSuccess: "Subscription successful!", purchaseError: "An error occurred.", insufficientPoints: "Insufficient points.", planUnavailable: "Plan unavailable." }
         };
 
-        let currentUser = null, slideIndex = 0, currentLang = 'bn', lastActiveSection = 'homeSection', monetagAds = {}, pointsInterval = null, sessionPoints = 0, userSubscription = { isActive: false };
+        let currentUser = null, slideIndex = 0, currentLang = 'bn', lastActiveSection = 'homeSection', adSettings = {}, pointsInterval = null, sessionPoints = 0, userSubscription = { isActive: false };
 
         document.addEventListener('DOMContentLoaded', () => {
             loadLanguage(); initAuth(); setupEventListeners();
@@ -245,6 +251,7 @@
                 item.addEventListener('click', () => { showSection(item.getAttribute('data-target')); });
             });
             document.getElementById('closeModal').addEventListener('click', closeDetailsModal);
+            document.getElementById('closePopupAdBtn').addEventListener('click', () => document.getElementById('popupAdModal').style.display = 'none');
             document.getElementById('langBnBtn').onclick = () => setLanguage('bn');
             document.getElementById('langEnBtn').onclick = () => setLanguage('en');
             document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
@@ -285,16 +292,16 @@
         }
 
         function loadAdSettings() {
-            database.ref('settings/monetagAds').once('value', s => {
-                if (s.val()) { monetagAds = s.val(); displayBannerAds(); }
+            database.ref('settings/ads').once('value', s => {
+                if (s.val()) { adSettings = s.val(); displayBannerAds(); }
             });
         }
 
         function displayBannerAds() {
-            if (monetagAds.homeBanner) document.getElementById('homeAdContainer').innerHTML = monetagAds.homeBanner;
-            if (monetagAds.menuBanner) {
-                document.getElementById('moviesAdContainer').innerHTML = monetagAds.menuBanner;
-                document.getElementById('seriesAdContainer').innerHTML = monetagAds.menuBanner;
+            if (adSettings.adsterraHomeBanner) document.getElementById('homeAdContainer').innerHTML = adSettings.adsterraHomeBanner;
+            if (adSettings.adsterraMenuBanner) {
+                document.getElementById('moviesAdContainer').innerHTML = adSettings.adsterraMenuBanner;
+                document.getElementById('seriesAdContainer').innerHTML = adSettings.adsterraMenuBanner;
             }
         }
 
@@ -302,15 +309,15 @@
             let allBanners = [];
             database.ref('movies').on('value', s => {
                 const data = s.val() ? Object.values(s.val()) : [];
-                displayGrid('popularMovies', data.slice(0, 10)); // Home grid
-                displayGrid('allMoviesGrid', data); // Movies page grid
+                displayGrid('popularMovies', data.slice(0, 10));
+                displayGrid('allMoviesGrid', data);
                 allBanners.push(...data.filter(item => item.banner));
                 if (allBanners.length > 0) populateSlider(allBanners);
             });
             database.ref('series').on('value', s => {
                 const data = s.val() ? Object.values(s.val()) : [];
-                displayGrid('trendingSeries', data.slice(0, 10)); // Home grid
-                displayGrid('allSeriesGrid', data); // Series page grid
+                displayGrid('trendingSeries', data.slice(0, 10));
+                displayGrid('allSeriesGrid', data);
                 allBanners.push(...data.filter(item => item.banner));
                 if (allBanners.length > 0) populateSlider(allBanners);
             });
@@ -389,13 +396,31 @@
         }
         
         function handleContentClick(item) {
-            if (item.type === 'premium' && !userSubscription.isActive) {
-                alert(translations[currentLang].premiumAccessMsg);
-                showSection('subscriptionSection');
-                return;
+            showOnClickInterstitial(() => {
+                if (item.type === 'premium' && !userSubscription.isActive) {
+                    alert(translations[currentLang].premiumAccessMsg);
+                    showSection('subscriptionSection');
+                    return;
+                }
+                if (item.seasons) { showSeriesDetails(item); } 
+                else { showEpisodeDetails(item); }
+            });
+        }
+
+        function showOnClickInterstitial(callback) {
+            if (adSettings.inAppInterstitial) {
+                const modal = document.getElementById('popupAdModal');
+                const container = document.getElementById('popupAdContainer');
+                container.innerHTML = adSettings.inAppInterstitial;
+                modal.style.display = 'flex';
+                document.getElementById('closePopupAdBtn').onclick = () => {
+                    modal.style.display = 'none';
+                    container.innerHTML = '';
+                    callback();
+                }
+            } else {
+                callback();
             }
-            if (item.seasons) { showSeriesDetails(item); } 
-            else { showEpisodeDetails(item); }
         }
 
         function showSeriesDetails(seriesData) {
@@ -430,7 +455,7 @@
                 const item = document.createElement('div');
                 item.className = 'episode-item';
                 item.innerHTML = `<img src="${episode.thumbnail || seriesData.thumbnail}" class="episode-thumb"><div class="episode-info"><div class="episode-title">${episode.title}</div></div>`;
-                item.onclick = () => showEpisodeDetails({ ...seriesData, ...episode });
+                item.onclick = () => handleContentClick({ ...seriesData, ...episode });
                 episodeList.appendChild(item);
             });
         }
@@ -441,20 +466,20 @@
             document.getElementById('detailsRating').textContent = item.rating ? `⭐ ${item.rating}` : '';
             document.getElementById('detailsGenre').textContent = item.genre ? item.genre.join(', ') : '';
             document.getElementById('detailsDesc').textContent = item.description;
-            document.getElementById('playBtn').onclick = () => showInterstitialAd(item);
+            document.getElementById('playBtn').onclick = () => showVideoPreRollAd(item);
             document.getElementById('downloadBtn').href = item.downloadUrl || '#';
             document.getElementById('detailsView').style.display = 'flex';
             document.getElementById('playerView').style.display = 'none';
             document.getElementById('detailsModal').style.display = 'flex';
         }
         
-        function showInterstitialAd(item) {
-            if (!monetagAds.interstitial) { playVideo(item.videoUrl); return; }
-            const adModal = document.getElementById('interstitialAdModal');
+        function showVideoPreRollAd(item) {
+            if (!adSettings.rewardedInterstitial) { playVideo(item.videoUrl); return; }
+            const adModal = document.getElementById('videoAdModal');
             const adPlayer = document.getElementById('adPlayer');
             const skipBtn = document.getElementById('skipAdBtn');
             adModal.style.display = 'block';
-            adPlayer.src = monetagAds.interstitial;
+            adPlayer.src = adSettings.rewardedInterstitial;
             adPlayer.play();
             const skipAdHandler = () => {
                 adPlayer.pause(); adModal.style.display = 'none';
@@ -492,9 +517,7 @@
         function startPointsTimer() {
             stopPointsTimer();
             sessionPoints = 0;
-            pointsInterval = setInterval(() => {
-                sessionPoints++;
-            }, 60000);
+            pointsInterval = setInterval(() => { sessionPoints++; }, 60000);
         }
 
         function stopPointsTimer() {
