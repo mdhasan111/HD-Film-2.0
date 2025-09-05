@@ -31,7 +31,7 @@
         .form-title { font-size: 18px; margin-bottom: 20px; color: var(--secondary-color); border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .form-group { margin-bottom: 15px; }
         .form-label { display: block; margin-bottom: 5px; font-weight: 500; }
-        .form-input, .form-textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .form-input, .form-textarea, .form-select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
         .form-textarea { min-height: 100px; resize: vertical; }
         .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s; }
         .btn-primary { background-color: var(--primary-color); color: #fff; }
@@ -107,6 +107,13 @@
                         <div class="form-group"><label>মুভির শিরোনাম</label><input type="text" id="movieTitle" class="form-input" required></div>
                         <div class="form-group"><label>বর্ণনা</label><textarea id="movieDescription" class="form-textarea" required></textarea></div>
                         <div class="form-group"><label>রেটিং</label><input type="number" id="movieRating" class="form-input" step="0.1" required></div>
+                        <div class="form-group">
+                            <label>ধরন (Type)</label>
+                            <select id="movieType" class="form-select" required>
+                                <option value="free">ফ্রি</option>
+                                <option value="premium">প্রিমিয়াম</option>
+                            </select>
+                        </div>
                         <div class="form-group"><label>থাম্বনেইল URL</label><input type="url" id="movieThumbnail" class="form-input" required></div>
                         <div class="form-group"><label>ব্যানার URL</label><input type="url" id="movieBanner" class="form-input"></div>
                         <div class="form-group"><label>ভিডিও URL</label><input type="url" id="movieVideo" class="form-input" required></div>
@@ -135,6 +142,13 @@
                     <form id="seriesForm">
                         <div class="form-group"><label>সিরিজের শিরোনাম</label><input type="text" id="seriesTitle" class="form-input" required></div>
                         <div class="form-group"><label>বর্ণনা</label><textarea id="seriesDescription" class="form-textarea" required></textarea></div>
+                        <div class="form-group">
+                            <label>ধরন (Type)</label>
+                            <select id="seriesType" class="form-select" required>
+                                <option value="free">ফ্রি</option>
+                                <option value="premium">প্রিমিয়াম</option>
+                            </select>
+                        </div>
                         <div class="form-group"><label>থাম্বনেইল URL</label><input type="url" id="seriesThumbnail" class="form-input" required></div>
                         <div class="form-group"><label>ব্যানার URL</label><input type="url" id="seriesBanner" class="form-input"></div>
                         <button type="submit" class="btn btn-primary">সিরিজ সংরক্ষণ করুন</button>
@@ -182,6 +196,15 @@
                         <button type="submit" class="btn btn-primary">সেটিংস সংরক্ষণ</button>
                     </form>
                 </div>
+                <div class="form-section">
+                    <h3 class="form-title">Monetag বিজ্ঞাপন সেটিংস</h3>
+                    <form id="monetagSettingsForm">
+                        <div class="form-group"><label>Interstitial Ad VAST Tag</label><textarea id="monetagInterstitial" class="form-textarea" placeholder="ভিডিওর আগে দেখানো বিজ্ঞাপনের VAST ট্যাগ"></textarea></div>
+                        <div class="form-group"><label>Homepage Banner Ad Code</label><textarea id="monetagHomeBanner" class="form-textarea" placeholder="হোমপেজের জন্য ব্যানার বিজ্ঞাপনের কোড"></textarea></div>
+                        <div class="form-group"><label>Menu Banner Ad Code</label><textarea id="monetagMenuBanner" class="form-textarea" placeholder="অন্যান্য পেজের জন্য ব্যানার বিজ্ঞাপনের কোড"></textarea></div>
+                        <button type="submit" class="btn btn-primary">বিজ্ঞাপন সেটিংস সংরক্ষণ</button>
+                    </form>
+                </div>
             </section>
         </main>
     </div>
@@ -203,14 +226,14 @@
     
     <script>
         const firebaseConfig = {
-  apiKey: "AIzaSyAHmkJZuHL7Pq-KzWGQxfj6ih3UPouPKiY",
-  authDomain: "hd-film-17c7f.firebaseapp.com",
-  databaseURL: "https://hd-film-17c7f-default-rtdb.firebaseio.com",
-  projectId: "hd-film-17c7f",
-  storageBucket: "hd-film-17c7f.firebasestorage.app",
-  messagingSenderId: "583770082263",
-  appId: "1:583770082263:web:51040c907693012b275992"
-};
+          apiKey: "AIzaSyAHmkJZuHL7Pq-KzWGQxfj6ih3UPouPKiY",
+          authDomain: "hd-film-17c7f.firebaseapp.com",
+          databaseURL: "https://hd-film-17c7f-default-rtdb.firebaseio.com",
+          projectId: "hd-film-17c7f",
+          storageBucket: "hd-film-17c7f.appspot.com",
+          messagingSenderId: "583770082263",
+          appId: "1:583770082263:web:51040c907693012b275992"
+        };
 
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
@@ -237,7 +260,7 @@
         }
         
         function initializePanel() {
-            loadDashboardData(); loadMovies(); loadSeries(); loadApiSettings();
+            loadDashboardData(); loadMovies(); loadSeries(); loadSettings();
         }
 
         function setupEventListeners() {
@@ -255,6 +278,7 @@
             document.getElementById('fetchSeriesFromTmdbBtn').addEventListener('click', fetchSeriesFromTMDB);
             document.getElementById('fetchEpisodesFromTmdbBtn').addEventListener('click', fetchSeasonsFromTMDB);
             document.getElementById('apiSettingsForm').addEventListener('submit', saveApiSettings);
+            document.getElementById('monetagSettingsForm').addEventListener('submit', saveMonetagSettings);
             document.getElementById('editEpisodeForm').addEventListener('submit', saveEpisodeChanges);
             document.getElementById('backToUser').addEventListener('click', () => window.location.href = 'index.html');
             document.getElementById('adminLogout').addEventListener('click', () => auth.signOut());
@@ -332,6 +356,7 @@
                 rating: parseFloat(document.getElementById('movieRating').value), thumbnail: document.getElementById('movieThumbnail').value,
                 banner: document.getElementById('movieBanner').value, videoUrl: document.getElementById('movieVideo').value,
                 downloadUrl: document.getElementById('movieDownload').value,
+                type: document.getElementById('movieType').value,
             };
             const action = key ? 'আপডেট' : 'যোগ';
             const ref = key ? database.ref('movies/' + key) : database.ref('movies').push();
@@ -363,6 +388,7 @@
                 document.getElementById('movieTitle').value = d.title;
                 document.getElementById('movieDescription').value = d.description;
                 document.getElementById('movieRating').value = d.rating;
+                document.getElementById('movieType').value = d.type || 'free';
                 document.getElementById('movieThumbnail').value = d.thumbnail;
                 document.getElementById('movieBanner').value = d.banner;
                 document.getElementById('movieVideo').value = d.videoUrl;
@@ -387,6 +413,7 @@
             const seriesData = {
                 title: document.getElementById('seriesTitle').value, description: document.getElementById('seriesDescription').value,
                 thumbnail: document.getElementById('seriesThumbnail').value, banner: document.getElementById('seriesBanner').value,
+                type: document.getElementById('seriesType').value,
             };
             database.ref('series').push(seriesData).then(() => {
                 alert('সিরিজ সফলভাবে যোগ করা হয়েছে!');
@@ -544,9 +571,26 @@
             database.ref('settings').update({ tmdbApiKey: apiKey }).then(() => alert('API কী সংরক্ষণ করা হয়েছে!'));
         }
 
-        function loadApiSettings() {
-            database.ref('settings/tmdbApiKey').once('value', s => {
-                if(s.val()) document.getElementById('tmdbApiKey').value = s.val();
+        function saveMonetagSettings(e) {
+            e.preventDefault();
+            const adSettings = {
+                interstitial: document.getElementById('monetagInterstitial').value,
+                homeBanner: document.getElementById('monetagHomeBanner').value,
+                menuBanner: document.getElementById('monetagMenuBanner').value
+            };
+            database.ref('settings/monetagAds').update(adSettings).then(() => alert('বিজ্ঞাপন সেটিংস সংরক্ষণ করা হয়েছে!'));
+        }
+
+        function loadSettings() {
+            database.ref('settings').once('value', s => {
+                if(s.val()) {
+                    document.getElementById('tmdbApiKey').value = s.val().tmdbApiKey || '';
+                    if (s.val().monetagAds) {
+                        document.getElementById('monetagInterstitial').value = s.val().monetagAds.interstitial || '';
+                        document.getElementById('monetagHomeBanner').value = s.val().monetagAds.homeBanner || '';
+                        document.getElementById('monetagMenuBanner').value = s.val().monetagAds.menuBanner || '';
+                    }
+                }
             });
         }
     </script>
